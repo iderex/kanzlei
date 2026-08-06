@@ -26,6 +26,39 @@ sentence:
 An issue says what is wrong, what the evidence is, and what done means. Where
 the evidence is a number, it carries the command that produced it.
 
+### Naming the issue in the change
+
+The link between a change and the work it belongs to is checked rather than
+asked for, under the check name `Pull request hygiene`. Two rules, and they are
+the words the check enforces:
+
+The body names an issue. Write the issue number as `#<number>` where the body
+says which issue this closes.
+
+Every commit subject names an issue. A merge commit is skipped, because git
+writes its subject and merging the default branch forward is not a change with
+an issue of its own.
+
+What counts is a hash followed by a number, with no letter or digit on either
+side of it, and no leading zero. A number written that way is what the tracker
+itself links. A full link to the tracker written out in prose is not read as a
+reference, and a reference inside a fenced block or a quotation is read as one:
+the check reads the text as text and does not try to decide which part of a
+document you meant.
+
+The same check reports how many lines the change touches and never refuses one
+for it. A bulk rename, a document migration and a first implementation all pass
+any cap legitimately, and a cap that refused them would push a change into
+pieces that are individually unreviewable.
+
+Run it before you push, against the range the check will use:
+
+    git log --format=%p%x09%s "$(git merge-base origin/main HEAD)..HEAD" > commits.tsv
+    PR_BODY='Closes #123' go run ./cmd/prhygiene -changed 120 < commits.tsv
+
+`.github/workflows/pr-hygiene.yml` is the authority for how the check gathers
+those inputs, and `internal/prhygiene` is where the rule itself lives.
+
 ## The checks
 
 This document does not list the checks. A list here drifts against the thing it

@@ -85,12 +85,24 @@ explain what it certifies, which is #11.
 
 ### Deterministic PR-hygiene checks
 
-Replaced, and this is the one entry with no issue behind it. The target's check
-reasons about the pull request rather than about the code: that the body carries
-an issue reference, that every commit subject carries one, and that a version
-bump also touches the changelog. Nothing in this plan delivers that, and #14
-delivers templates, which prompt rather than refuse. The gap is named here so
-the mapping is not a promise, and #127 holds it.
+Replaced. The target's check reasons about the pull request rather than about
+the code: that the body carries an issue reference, that every commit subject
+carries one, and that a version bump also touches the changelog. #14 delivers
+templates, which prompt rather than refuse, so the refusal is its own thing.
+
+The first two legs are delivered by #127, under the check name `Pull request
+hygiene`. The decision lives in `internal/prhygiene` rather than in the workflow
+file, so the shapes that look like a reference and are not have cases in front
+of them.
+
+The third leg is not delivered and is not claimed. This project has no version
+number and no changelog, so there is nothing for that leg to read. #118 is where
+a version number acquires a meaning, and the leg belongs with it rather than
+here.
+
+The target's job name carries the word deterministic because it separates a
+deterministic tier from a heuristic one. The counterpart here has a refusing
+tier and a warning tier, and the warning tier is the size, which never blocks.
 
 ### Enforce greppable invariants
 
