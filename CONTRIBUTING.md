@@ -67,6 +67,12 @@ mechanism, and #8, which is the separate harness for the tests that genuinely
 need a real service or real hardware. Until #7 lands, the sentence above is the
 rule and nothing enforces it.
 
+The default gate does not run `test/needs-real-hardware-or-services/`, because
+a check that needs a model, an identity provider or a source system is a check
+that goes red for a reason no contributor's change caused. The readme in that
+directory says what each suite needs, how to ask for it and how to read a run
+that turned one away.
+
 ## Sign your work
 
 Every commit carries a `Signed-off-by` trailer naming its author, and the DCO
