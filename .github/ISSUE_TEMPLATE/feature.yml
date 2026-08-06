@@ -1,0 +1,55 @@
+name: Feature request
+description: Something this project should do and does not.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A request that names the problem is easier to answer than one that names
+        a solution, because the solution can then be argued about on its merits.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: >-
+        The situation somebody is in without it, and what they do today instead.
+        If the problem is that a permission cannot be expressed, an answer cannot
+        be checked, or a record cannot be produced for an auditor, say so
+        directly; those three carry more weight here than convenience.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: >-
+        The shape of the change, as far as you have thought about it. An
+        incomplete idea is fine and is better than a problem with no direction
+        at all.
+    validations:
+      required: false
+
+  - type: textarea
+    id: cost
+    attributes:
+      label: What it would cost
+      description: >-
+        What this adds that has to be maintained afterwards: a dependency, a
+        second protocol, a new surface that takes input from strangers, a
+        configuration option an operator has to understand, or a promise the
+        documentation then has to keep. Say so even where you think the cost is
+        worth paying. A request with an honest cost is taken more seriously than
+        one with none.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What else you considered
+      description: >-
+        Including doing nothing, and what that leaves broken.
+    validations:
+      required: false
