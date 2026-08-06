@@ -1,0 +1,5 @@
+# What a run of the default suite leaves behind. The coverage profile is a fact
+# about one run on one machine, and a tracked one would be read as a fact about
+# the tree. The number it produces is held in coverage-floor.txt, which is
+# tracked, and the profile itself is not.
+/coverage.out

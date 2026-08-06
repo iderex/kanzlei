@@ -1,0 +1,18 @@
+# The share of statements the default suite has to reach, as a percentage.
+#
+# It is one number and it is set from a measurement rather than from an
+# ambition. The measurement is the one the gate takes:
+#
+#     go test -race -covermode=atomic -coverprofile=coverage.out ./...
+#     go run ./cmd/coverfloor -profile coverage.out -floor coverage-floor.txt
+#
+# What it measures is reach and not quality. A statement is counted as covered
+# the moment any test executes it, whether or not anything was asserted about
+# what it did, so this number can be raised by a test that asserts nothing. #109
+# is where the measurement gets teeth, by asking whether a test notices when the
+# statement it reaches is changed.
+#
+# Lowering it is a change to this file with a commit message saying which
+# package lost its tests and why that was accepted. That is the whole reason the
+# number lives in the tree rather than inside the workflow.
+76.4

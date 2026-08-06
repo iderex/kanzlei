@@ -123,6 +123,46 @@ The check reads the position rather than the type: the last return value is the
 error by convention in every Go program, so a blank anywhere else is left alone
 and an ordinary destructuring is not caught by this.
 
+## The default suite
+
+One command, and it is the command the check runs:
+
+    go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+The race detector is on in that command because it is on in the check. A suite
+that passes locally without it and goes red here is a suite run two ways, and
+the way nobody runs locally is the one that finds the defect late. It comes with
+the toolchain and needs no installation step.
+
+`-covermode=atomic` belongs with `-race` rather than being a separate opinion:
+the default counter is not safe to increment from two goroutines, and the
+detector is watching.
+
+A test file sits in the same directory as the code it tests, named for that file
+with a `_test.go` suffix.
+
+The command above prints coverage per package. The number over the whole module
+comes from the profile it wrote:
+
+    go run ./cmd/coverfloor -profile coverage.out -floor coverage-floor.txt
+
+That command is the second half of the check, and it refuses a run that measured
+less than the number in `coverage-floor.txt`. The number is in the tree rather
+than in the workflow so that lowering it is a diff with a commit message
+attached.
+
+**The floor measures reach and not quality.** A statement counts as covered the
+moment any test executes it, whether or not anything was asserted about what it
+did, so the number can be raised by a test that checks nothing. It is here for
+one narrower thing: it makes a package that arrived with no tests visible on the
+day it lands rather than a year later. #109 is where the measurement gets teeth,
+by asking whether a test notices when the statement it reaches is changed. Do
+not read this number as evidence of a well tested tree, and do not quote it as
+one.
+
+`coverage.out` is not tracked. `.gitignore` keeps it out, because a profile is a
+fact about one run on one machine.
+
 ## Tests run headless, unelevated and offline
 
 Every test in the default suite runs with no display server, no administrative
@@ -130,11 +170,12 @@ rights, no accelerator and no outbound network, and a test that needs any of
 those is marked and excluded from the default run by configuration rather than
 by a flag anybody has to remember.
 
-There is no command here that lists the marked tests, and there is no default
-suite yet. Both come from #7, which establishes the condition and the marking
-mechanism, and #8, which is the separate harness for the tests that genuinely
-need a real service or real hardware. Until #7 lands, the sentence above is the
-rule and nothing enforces it.
+There is no command here that lists the marked tests. That comes from #7, which
+establishes the condition and the marking mechanism, alongside #8, which is the
+separate harness for the tests that genuinely need a real service or real
+hardware and which has landed. Until #7 lands, the sentence above is the rule
+and nothing enforces it: the default suite runs on a hosted runner that happens
+to have a route out, and nothing refuses a test that uses it.
 
 The default gate does not run `test/needs-real-hardware-or-services/`, because
 a check that needs a model, an identity provider or a source system is a check
