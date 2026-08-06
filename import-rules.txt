@@ -1,0 +1,99 @@
+# Which package may import which, inside this module.
+#
+# docs/layout.md is where these rules are argued. This file is the rule and
+# internal/importrules is what refuses a violation, so the note explains and
+# nothing depends on somebody having read it.
+#
+# One line per package, written as its path from the module root. What follows
+# the colon is the complete set of packages inside this module that its files
+# may import, and an import that is not on the line is refused. A package in
+# the tree with no line here is refused as well, so this file cannot fall
+# behind the tree by being forgotten.
+#
+# A permission list rather than a list of forbidden edges, because the edge
+# that matters is the one nobody thought of. Several rules below are therefore
+# carried by what a line does not say, and each of those lines says so above
+# itself rather than leaving a reader to notice an absence.
+#
+# "<package> +test:" adds what that package's own test files may import on top
+# of its line. A test file may import the package it tests without any line
+# saying so, which is what an external test package does.
+#
+# "planned <package> <reference>" declares a package that is not in the tree
+# yet, carrying the issue that creates it. It is a debt rather than a place to
+# hide one: the day the package lands, the marker is stale and the check says
+# so. A line naming a package that is neither in the tree nor planned is
+# refused as a typo.
+#
+# "test-only <package> <reference>" says that nothing which ships may import
+# it. A shipped line naming one is refused when this file is read, before any
+# tree is looked at.
+
+# The binaries. Argument parsing and process lifetime live here and the
+# decisions live under internal/, which is why these lines are short.
+cmd/kanzlei: internal/build internal/server
+cmd/coverfloor: internal/coverfloor
+
+# internal/build imports nothing from this module and never will. It is the one
+# package everything may depend on, and that holds only for as long as it
+# depends on nothing.
+internal/build:
+
+# The HTTP surface: the routing table, the listener, the shutdown, and the
+# handlers.
+#
+# What this line carries is what is missing from it. No handler imports the
+# datastore. A handler asks internal/retrieval a question and is given an
+# answer already filtered for the principal that asked, so there is no route
+# from a request to the index that does not pass through the filter. A handler
+# holding a store client is one refactor away from a handler that queries the
+# index directly, and that refactor reads as harmless in a diff.
+internal/server: internal/retrieval
+
+# The checks this repository runs against itself. None of them is part of the
+# binary, nothing in the binary imports them, and each is a package rather than
+# a shell block for the reason docs/decisions/0001-means.md gives.
+internal/coverfloor:
+internal/importrules:
+internal/sourcecheck:
+
+# The suites that are not part of the default run, and the harness they are
+# written against. Nothing that ships may reach a harness that needs a real
+# model runtime, a real identity provider or a real source system: a package
+# that refuses to run without one of those, reached from a shipped file, is a
+# binary that refuses to start without one.
+test-only test/needs-real-hardware-or-services #8
+test/needs-real-hardware-or-services:
+
+# Planned, with the issue that creates each one. The paths are what those
+# issues are expected to write and are not settled by this file; whoever lands
+# one moves the line rather than adding a second.
+
+# The datastore, holding documents, chunks, permissions, principals,
+# conversations and vectors in one place, which is docs/decisions/0002.
+#
+# The rule on this line is again the absence: the model runtime is not
+# reachable from the store. Text on its way to being embedded passes through
+# the packages that ask for an embedding, and a store that could call a runtime
+# itself is a store that can send a document somewhere on its own.
+planned internal/store #9
+internal/store:
+
+# The one package that reads the index, because it is the one that applies the
+# permission filter inside the query rather than around it. Every read goes
+# through here, so there is no second route to the same data with the filter
+# left off.
+planned internal/retrieval #62
+internal/retrieval: internal/store
+
+# The model runtime behind its interface, so an operator can change engines
+# without this project changing.
+planned internal/runtime #71
+internal/runtime:
+
+# The fake source, which needs no service. It exists so the connector contract
+# suite can run under the conditions in #7, and a shipped file that reached it
+# would be a binary answering from a fixture corpus.
+planned internal/sources/fake #48
+test-only internal/sources/fake #48
+internal/sources/fake:
