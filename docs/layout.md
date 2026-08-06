@@ -33,6 +33,15 @@ fixtures whose exact bytes are the thing under test.
 [testdata/README.md](../testdata/README.md) says which fixtures belong there and
 which belong beside the test that reads them.
 
+`test/` holds the suites that are not part of the default run, one directory per
+harness, each named after what it needs.
+`test/needs-real-hardware-or-services/` is the one that exists: the cases that
+cannot be proved without a real model runtime, a real identity provider or a
+real source system. A test that can be written against a fake belongs beside the
+code in `internal/`, not here.
+[the readme in that directory](../test/needs-real-hardware-or-services/README.md)
+says what each suite needs and how a run is read.
+
 `.github/` holds what the hosting service reads and nothing this project runs
 itself. `.github/workflows/` holds the checks, one file per published check, and
 `.github/ISSUE_TEMPLATE/` holds the forms that route a report.
