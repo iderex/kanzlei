@@ -25,6 +25,13 @@ whether the tree is acceptable belongs where a fixture can be put in front of
 it. `go build ./...` builds it alongside the service; anything that ships the
 service names `./cmd/kanzlei` rather than the module.
 
+`cmd/scanfloor` is the second of those, and it is here for the same reason. It
+reads the output of the code scanning analysis and refuses a run carrying a
+finding at or above the severity in `scan-floor.txt`. The analyser itself
+refuses nothing, and the alternative to a program here was a setting outside the
+tree that no diff would show changing.
+[code-scanning.md](code-scanning.md) is the whole of it.
+
 `internal/` holds everything the binary is made of, and the packages that are
 not: the checks this repository runs against itself. It is `internal` on purpose:
 nothing outside this module can import any of it, so no part of this tree
@@ -53,8 +60,10 @@ code in `internal/`, not here.
 says what each suite needs and how a run is read.
 
 `.github/` holds what the hosting service reads and nothing this project runs
-itself. `.github/workflows/` holds the checks, one file per published check, and
-`.github/ISSUE_TEMPLATE/` holds the forms that route a report.
+itself. `.github/workflows/` holds the checks, one file per published check,
+`.github/ISSUE_TEMPLATE/` holds the forms that route a report, and
+`.github/codeql/` holds the query set the code scanning analysis is configured
+with, which is in the tree rather than left to the analyser's default.
 
 ## Inside `internal/`
 
@@ -79,6 +88,20 @@ it is not part of the binary and the service imports nothing from it. It reads a
 coverage profile, reports what share of statements the run reached, and decides
 whether that clears the floor the tree holds. `cmd/coverfloor` is the argument
 parsing over it and takes no decision of its own.
+
+`internal/scanfloor` is the third, and the same sentence applies to it. It reads
+the SARIF a code scanning run wrote, resolves the severity of each finding
+against the rules the document declares, and decides which of them refuse the
+run. The direction it decides in is the part worth the fixtures: a finding whose
+severity cannot be determined refuses, rather than being skipped or read as
+low. `cmd/scanfloor` is the argument parsing over it.
+
+`internal/scanfixture` is not a package at all in the sense the others are. It
+holds one deliberately defective file, kept out of every build by
+`//go:build scanfixture`, whose only purpose is to make the code scanning gate
+go red on demand. Nothing imports it and no binary contains it.
+[code-scanning.md](code-scanning.md) says how the proof is run and why a gate
+whose analyser runs on the hosting service cannot be proved by the suite.
 
 `internal/server` holds the HTTP surface: the routing table, the listener and
 the shutdown. Handlers live here. What a handler calls does not.

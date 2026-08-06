@@ -1,0 +1,110 @@
+# Code scanning: the defects an analyser finds by following a value through the
+# program, which is the lens neither the formatting gate nor the vet suite has.
+#
+# What it is for here specifically. This project's whole claim is that a
+# document reaches only the person entitled to it, and the shapes that break
+# that claim are shapes where a value from a request reaches somewhere it should
+# not: a file path, a query, a command, a template. Those are dataflow defects.
+# `go vet` does not follow a value across function boundaries and was never
+# meant to.
+#
+# The language is named rather than detected, because detection is a decision
+# taken elsewhere that would change what this gate covers without a commit here.
+# The query set is in .github/codeql/config.yml for the same reason.
+#
+# Whether a finding refuses the run is decided by a program in this repository
+# rather than by the analyser or by a repository setting. The analyser's own
+# behaviour is to record an alert and leave the run green, and a setting is a
+# decision that lives outside the tree where no diff shows it changing.
+# cmd/scanfloor reads the analysis output against scan-floor.txt, and
+# internal/scanfloor holds the fixtures that prove which way it decides.
+name: code-scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["**"]
+  # The proof route. Running this by hand with the input set compiles the
+  # deliberately defective file in internal/scanfixture into the analysis, which
+  # is expected to make this job red. A gate that has never refused anything is
+  # a gate nobody has proved, and this is the only way to prove one whose
+  # analyser runs on the hosting service rather than in the suite.
+  workflow_dispatch:
+    inputs:
+      include_fixture:
+        description: "Compile internal/scanfixture into the analysis. The run is expected to be refused."
+        type: boolean
+        default: false
+
+# Read-only at the top. The one job below adds the single scope it needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  code-scanning:
+    # The name published as the check. It is an interface: a protection rule
+    # names a check as a string, so renaming this silently stops it being
+    # required. #115 is where it is considered for the required set.
+    name: Code scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      # The results are uploaded so they appear on the pull request as
+      # annotations rather than only in a dashboard somebody has to go and open.
+      # That upload is the only write this job makes.
+      security-events: write
+
+    env:
+      # Set here rather than inside a run block, so the value from the dispatch
+      # input is an environment variable the shell reads instead of text pasted
+      # into a script. On every other event the inputs context is empty and this
+      # is the empty string, which is the ordinary build.
+      GOFLAGS: ${{ inputs.include_fixture && '-tags=scanfixture' || '' }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes, so do not persist the GITHUB_TOKEN in .git/config.
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # go.mod is the authority for the version. Naming one here would give
+          # this repository two, and the second would drift. It also has to come
+          # before the analysis, because the analyser builds the module and a
+          # runner's own Go is older than the pin.
+          go-version-file: go.mod
+          check-latest: false
+
+      - name: Initialise the analysis
+        uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+        with:
+          languages: go
+          build-mode: autobuild
+          config-file: .github/codeql/config.yml
+
+      - name: Analyse
+        uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+        with:
+          output: sarif-results
+          # The proof run does not upload. Its findings are real defects in a
+          # file that ships in no build, and putting them in the dashboard would
+          # leave somebody to work out later why an alert names a path they
+          # cannot find in their checkout. The floor below still judges them,
+          # which is the half the proof is about.
+          upload: ${{ inputs.include_fixture && 'never' || 'always' }}
+
+      - name: The severity floor
+        run: |
+          set -euo pipefail
+          # Reads the sarif the step above wrote. A file that is not there is a
+          # refusal rather than a tree with no findings, which is the case an
+          # analysis that failed in a new way would otherwise pass through.
+          go run ./cmd/scanfloor -sarif sarif-results/go.sarif -floor scan-floor.txt
