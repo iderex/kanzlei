@@ -54,6 +54,75 @@ Where a check needs a tool, the workflow file pins its version. Use that
 version locally. A local run with a different version answers a different
 question.
 
+### The analysers
+
+The static analysis check runs four things, and each is named here with the
+command that reproduces it exactly as the check runs it. This is the one place
+this document names what a check does rather than pointing at the file, because
+an analyser you cannot run locally is one you meet for the first time on a red
+gate. `.github/workflows/analysis.yml` is still the authority, and if these
+commands and that file disagree, the file is right.
+
+Install the two that are not in the Go distribution, at the versions the
+workflow pins:
+
+    go install github.com/kisielk/errcheck@v1.9.0
+    go install golang.org/x/tools/go/analysis/passes/nilness/cmd/nilness@v0.38.0
+
+The standard vet suite, which the toolchain ships:
+
+    go vet ./...
+    go vet -tags needsreal ./...
+
+An error that is returned and never looked at, and a type assertion whose
+result is ignored:
+
+    errcheck -excludeonly -exclude .errcheck-excludes -asserts ./...
+    errcheck -excludeonly -exclude .errcheck-excludes -asserts -tags needsreal ./...
+
+`.errcheck-excludes` is the whole rule set, because `-excludeonly` turns the
+tool's own list off. Adding a line to it is how an exclusion is argued for, and
+every line carries its reason above it.
+
+A value that is nil where it is used:
+
+    go vet -vettool="$(go env GOPATH)/bin/nilness" ./...
+    go vet -tags needsreal -vettool="$(go env GOPATH)/bin/nilness" ./...
+
+A suppression comment with no reason on the same line:
+
+    go test ./internal/sourcecheck -count=1
+
+Each command is run twice because a build constraint hides code from an
+analyser as effectively as deleting it, and the harness under `test/` is only
+compiled under its tag.
+
+### Switching an analyser off
+
+On the line that switches it off, say why. A comment that names the analyser and
+nothing else is refused, and so is one whose reason is a single word:
+
+    //nolint:errcheck // the error is the authorisation decision and is handled below
+
+`internal/sourcecheck` is what refuses the bare one, and it refuses it whether
+the suppression is on its own line or trailing the line it applies to. It reads
+line comments only, because that is all any of the analysers read.
+
+The same rule covers the suppression no analyser can see: a call whose last
+return value is thrown away into the blank identifier.
+
+    allowed, _ := authorise(principal, document)
+
+That is the defect this project can least afford, because the value discarded
+there is the authorisation decision. Where the discard is right, the reason goes
+on the same line:
+
+    _ = srv.Shutdown(ctx) // cleanup after the case has already reported, where a shutdown error changes no verdict
+
+The check reads the position rather than the type: the last return value is the
+error by convention in every Go program, so a blank anywhere else is left alone
+and an ordinary destructuring is not caught by this.
+
 ## Tests run headless, unelevated and offline
 
 Every test in the default suite runs with no display server, no administrative

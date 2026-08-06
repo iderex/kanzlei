@@ -21,7 +21,7 @@ import (
 func TestMain(m *testing.M) {
 	code := m.Run()
 	if buildOnce.path != "" {
-		_ = os.RemoveAll(filepath.Dir(buildOnce.path))
+		_ = os.RemoveAll(filepath.Dir(buildOnce.path)) // a temporary directory that could not be removed is not worth failing a green run over
 	}
 	os.Exit(code)
 }
@@ -65,8 +65,8 @@ func TestTheProcessStartsAnswersAndExitsCleanly(t *testing.T) {
 	// Whatever else happens below, this process does not outlive the test.
 	t.Cleanup(func() {
 		if cmd.ProcessState == nil {
-			_ = cmd.Process.Kill()
-			_ = cmd.Wait()
+			_ = cmd.Process.Kill() // this runs only where the case already failed, and a process that is already gone reports an error
+			_ = cmd.Wait()         // reaping the killed process; its status is the kill, not the case
 		}
 	})
 
@@ -77,7 +77,7 @@ func TestTheProcessStartsAnswersAndExitsCleanly(t *testing.T) {
 		t.Fatalf("get liveness at %s: %v (stderr %q)", addr, err, stderr.String())
 	}
 	body, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close() // the body is fully read above, so a close error says nothing about it
 	if err != nil {
 		t.Fatalf("read liveness body: %v", err)
 	}
