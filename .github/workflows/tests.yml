@@ -1,0 +1,78 @@
+# The default suite: one run, with the race detector on and a coverage profile
+# coming out of it.
+#
+# One command rather than three. A suite run one way locally and another way
+# here is two suites, and the one nobody runs is the one that rots. The command
+# below is the command CONTRIBUTING.md names, character for character, so a
+# contributor reproducing this check is running this check.
+#
+# The race detector is on because a data race is the defect this project can
+# least afford to find later: the authorisation decision is taken per request,
+# and a race in the path that takes it is a disclosure that happens under load
+# and not in a reproduction. It comes with the toolchain, so it costs an
+# argument here and no installation step.
+#
+# Coverage comes out of that same run rather than out of a second one. A second
+# run measures a second thing, and the two disagree the first time a test is
+# flaky. The floor is then judged by a program in this repository rather than by
+# a shell block, because deciding whether the tree is acceptable is the kind of
+# decision docs/decisions/0001-means.md keeps somewhere fixtures can be put in
+# front of it. cmd/coverfloor is that program and internal/coverfloor holds its
+# fixtures.
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Read-only at the top. No job here writes anything, so no job is granted more.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    # The name published as the check. It is an interface: a protection rule
+    # names a check as a string, so renaming this silently stops it being
+    # required. #6 is where the published names are settled.
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes, so do not persist the GITHUB_TOKEN in .git/config.
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # go.mod is the authority for the version. Naming one here would give
+          # this repository two, and the second would drift.
+          go-version-file: go.mod
+          check-latest: false
+
+      - name: The default suite, with the race detector, producing coverage
+        run: |
+          set -euo pipefail
+          # -covermode=atomic rather than the default, because the default
+          # counter is not safe to increment from two goroutines and this run
+          # has the race detector watching. The two flags belong together.
+          #
+          # ./... is every package in the module. The harness under test/ is
+          # behind a build constraint, so this compiles it, finds no test files
+          # and says so; nothing here has to remember to exclude it.
+          go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: The coverage floor
+        run: |
+          set -euo pipefail
+          # Reads the profile the step above wrote. A profile that is not there
+          # is a refusal rather than a measurement of zero, which is the case a
+          # test step that failed in a new way would otherwise pass through.
+          go run ./cmd/coverfloor -profile coverage.out -floor coverage-floor.txt

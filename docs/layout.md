@@ -16,8 +16,17 @@ what it needs, starts it and stops it. Logic that is worth testing does not live
 here, because a `main` package is awkward to reuse and its tests cannot be
 imported by anything else.
 
-`internal/` holds everything the binary is made of, and one package that is not:
-a check this repository runs against its own source. It is `internal` on purpose:
+Not every binary here is part of the service. `cmd/coverfloor` is a check this
+repository runs against itself: it reads the coverage profile the default suite
+wrote and refuses a run that fell below `coverage-floor.txt`. It is a binary
+rather than a shell block for the reason
+[decisions/0001-means.md](decisions/0001-means.md) gives, that a rule deciding
+whether the tree is acceptable belongs where a fixture can be put in front of
+it. `go build ./...` builds it alongside the service; anything that ships the
+service names `./cmd/kanzlei` rather than the module.
+
+`internal/` holds everything the binary is made of, and the packages that are
+not: the checks this repository runs against itself. It is `internal` on purpose:
 nothing outside this module can import any of it, so no part of this tree
 becomes somebody's dependency by accident and every package here can be changed
 without an argument about who else is using it.
@@ -58,12 +67,18 @@ from one.
 built from. It imports nothing from this module and never will, so anything may
 import it.
 
-`internal/sourcecheck` is the exception to the sentence above: it is not part of
-the binary and nothing imports it. It reads this repository's own Go source and
+`internal/sourcecheck` is the first exception to the sentence above: it is not
+part of the binary and nothing imports it. It reads this repository's own Go source and
 refuses what no analyser can see, which today is a suppression comment carrying
 no reason. It lives here rather than in a shell block inside a workflow because
 it decides whether the tree is acceptable, and that decision is worth having
 fixtures in front of it.
+
+`internal/coverfloor` is the second exception, for the same reason as the first:
+it is not part of the binary and the service imports nothing from it. It reads a
+coverage profile, reports what share of statements the run reached, and decides
+whether that clears the floor the tree holds. `cmd/coverfloor` is the argument
+parsing over it and takes no decision of its own.
 
 `internal/server` holds the HTTP surface: the routing table, the listener and
 the shutdown. Handlers live here. What a handler calls does not.
