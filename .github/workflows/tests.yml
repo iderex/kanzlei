@@ -12,6 +12,13 @@
 # and not in a reproduction. It comes with the toolchain, so it costs an
 # argument here and no installation step.
 #
+# The run happens with no display, no administrative rights, no accelerator and
+# no route out. Those are conditions of the run rather than of the job: the job
+# needs a route to check the tree out and to fetch the toolchain, and the route
+# is taken away afterwards, from the user the suite runs as. The step that
+# proves it is gone runs before the suite, because a rule that failed to install
+# would otherwise leave a suite with a route and a log saying it had none.
+#
 # Coverage comes out of that same run rather than out of a second one. A second
 # run measures a second thing, and the two disagree the first time a test is
 # flaky. The floor is then judged by a program in this repository rather than by
@@ -57,7 +64,76 @@ jobs:
           go-version-file: go.mod
           check-latest: false
 
+      - name: No display, no administrative rights, no accelerator
+        run: |
+          set -euo pipefail
+          fail=0
+          if [ -n "${DISPLAY:-}" ]; then
+            echo "::error::DISPLAY is set to ${DISPLAY}; the default run is supposed to have no display server"
+            fail=1
+          fi
+          if [ "$(id -u)" = "0" ]; then
+            echo "::error::this job runs as root; the default run is supposed to have no administrative rights"
+            fail=1
+          fi
+          # Only the device nodes that mean an accelerator is attached. /dev/dri
+          # is deliberately not among them: it is present for software
+          # rendering on ordinary machines, so refusing it would refuse a
+          # machine that has no accelerator at all.
+          accelerators=$(ls -d /dev/nvidia* /dev/kfd 2>/dev/null || true)
+          if [ -n "$accelerators" ]; then
+            echo "::error::accelerator devices are present: ${accelerators}"
+            fail=1
+          fi
+          [ "$fail" -eq 0 ] || exit 1
+          echo "uid $(id -u), DISPLAY unset, no accelerator device"
+
+      - name: Take the route out away from the user the suite runs as
+        run: |
+          set -euo pipefail
+          # This is where the distinction #7 asks for is made. The JOB has a
+          # route out and needs one: the checkout and the toolchain both come
+          # over it. The DEFAULT RUN does not. So the route is removed from the
+          # user the suite runs as, after everything that needed one has already
+          # happened, rather than from the whole job.
+          #
+          # It is done from outside the test process because Go offers no hook a
+          # test package can install to refuse a connection made by code that
+          # builds its own dialler. sudo appears here and nowhere else: the rule
+          # is installed by root and the suite still runs as the ordinary user,
+          # so nothing about the run itself is elevated.
+          uid="$(id -u)"
+          sudo iptables -I OUTPUT 1 -m owner --uid-owner "$uid" ! -o lo -j REJECT
+          sudo ip6tables -I OUTPUT 1 -m owner --uid-owner "$uid" ! -o lo -j REJECT
+          # The stub resolver listens on loopback, so the rule above leaves name
+          # resolution working. A test that resolves a name is reaching off this
+          # machine whatever the first hop looks like.
+          sudo iptables -I OUTPUT 1 -m owner --uid-owner "$uid" -d 127.0.0.53 -j REJECT
+
+      - name: Prove the route is gone before anything is read into the run
+        run: |
+          set -euo pipefail
+          # Without this, a rule that failed to install would leave a suite
+          # running with a route out and a log saying it had none. The address
+          # is one this job has already reached in an earlier step, so a success
+          # here means the route is still there rather than that the target
+          # happened to be up.
+          if curl --max-time 10 -sS -o /dev/null https://api.github.com/; then
+            echo "::error::this user still has a route out; the run that follows would not be offline"
+            exit 1
+          fi
+          echo "no route out of this user"
+          # There is no separate positive control for loopback. The suite is
+          # one: internal/server binds a listener on 127.0.0.1 and fetches from
+          # it, and cmd/kanzlei starts the binary and asks it whether it is
+          # alive. A rule that had taken loopback with it would redden both.
+
       - name: The default suite, with the race detector, producing coverage
+        env:
+          # An accidental module fetch fails here rather than hanging against a
+          # route that is no longer there.
+          GOPROXY: "off"
+          GOFLAGS: "-mod=mod"
         run: |
           set -euo pipefail
           # -covermode=atomic rather than the default, because the default

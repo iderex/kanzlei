@@ -170,12 +170,44 @@ rights, no accelerator and no outbound network, and a test that needs any of
 those is marked and excluded from the default run by configuration rather than
 by a flag anybody has to remember.
 
-There is no command here that lists the marked tests. That comes from #7, which
-establishes the condition and the marking mechanism, alongside #8, which is the
-separate harness for the tests that genuinely need a real service or real
-hardware and which has landed. Until #7 lands, the sentence above is the rule
-and nothing enforces it: the default suite runs on a hosted runner that happens
-to have a route out, and nothing refuses a test that uses it.
+What is marked is printed rather than listed here:
+
+    go test -tags needsreal -list '.*' ./test/...
+
+The marking is a build constraint, `//go:build needsreal`, and the marked files
+live under `test/`. Both halves matter: the constraint is what excludes them
+from `go test ./...` without anybody remembering a flag, and the directory is
+what makes the command above a complete list rather than a partial one. A marked
+file anywhere else would be excluded from the default run and absent from the
+listing, and `internal/testreach` refuses that.
+
+The condition binds the run and not the job. The check has a route out while it
+checks the tree out and installs the toolchain, and that route is taken away
+from the user the suite runs as before the suite starts. The step that proves it
+is gone runs first, so a rule that failed to install reddens the check instead of
+producing a suite that had a route and a log saying it had none.
+
+Inside the process, `internal/testreach` reads the test files and refuses a test
+in the default run that dials an address which is not a loopback one, resolves a
+name, or opens a device. It runs as part of the default suite, so the refusal
+arrives with a file and a line rather than as a connection error somebody reads
+as a defect in the code under test.
+
+Where a test dials a loopback address the check cannot read, because the address
+came from a listener it started a moment earlier, the reason goes on the same
+line, in the shape the analyser suppressions use:
+
+    resp, err := http.Get("http://" + addr + "/livez") // loopback: the address this case's own child process printed
+
+That reason excuses only an address the check could not read. An address written
+out in the source and pointing off this machine is refused whatever comment sits
+beside it.
+
+What this does not reach: a test that calls a helper which dials, a dial through
+an interface value, and a reason comment that is simply wrong. It reads direct
+calls through a package selector and nothing else. It is a floor under the
+condition rather than a proof of it, and #114 is where the condition is
+re-proved later from a run rather than from source.
 
 The default gate does not run `test/needs-real-hardware-or-services/`, because
 a check that needs a model, an identity provider or a source system is a check
