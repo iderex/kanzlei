@@ -1,0 +1,148 @@
+# Deterministic text: what is stored in git, not what a checkout happens to show.
+#
+# Line endings and encoding are decided by .gitattributes. Nothing enforces that
+# a file actually arrived that way: a clone with a stale copy of the file, a
+# commit made through the web interface, or a path given an explicit -text
+# override can all put CR bytes into a blob that is declared text. This guard
+# reads the index rather than the working tree, because a checkout applies the
+# very conversion whose absence is the failure being looked for.
+#
+# Three legs, each refusing a different way the tree stops being deterministic:
+# a text blob stored with CRLF or with mixed endings, a tracked path with no
+# declared treatment at all, and a text blob that is not valid UTF-8.
+name: text-guard
+
+on:
+  # Every branch and every pull request. The guard is a read-only scan of the
+  # index and has to cover any future release branch, not only main.
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Read-only: the guard reads the index and writes nothing.
+permissions:
+  contents: read
+
+# Cancel a superseded run on the same ref; the scan is cheap and idempotent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  text:
+    name: Reject nondeterministic text
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes, so do not persist the GITHUB_TOKEN in .git/config.
+          persist-credentials: false
+
+      - name: Refuse a text blob stored with CRLF or mixed endings
+        run: |
+          set -euo pipefail
+          # git ls-files --eol reports the index (i/), the working tree (w/) and
+          # the attributes that applied. i/ is the authority here: it is what is
+          # actually stored, before any checkout conversion.
+          if ! listing=$(git ls-files --eol); then
+            echo "::error::Could not list the index. Failing closed."
+            exit 1
+          fi
+          bad=$(printf '%s\n' "$listing" | awk -F'\t' '
+            {
+              meta = $1; path = $2
+              if (match(meta, /^i\/[^ \t]+/)) ieol = substr(meta, RSTART + 2, RLENGTH - 2); else ieol = "?"
+              if (ieol == "crlf" || ieol == "mixed") print ieol "\t" path
+            }')
+          if [ -n "$bad" ]; then
+            printf '%s\n' "$bad" | while IFS="$(printf '\t')" read -r eol path; do
+              line=$(git cat-file blob ":$path" | grep -n -m1 "$(printf '\r')" | cut -d: -f1 || true)
+              echo "::error file=${path},line=${line:-1}::stored with ${eol} line endings; .gitattributes declares this path text with eol=lf"
+            done
+            echo "::error::A tracked text file is stored with CR bytes. Re-add it from a clone that has this repository's .gitattributes (git add --renormalize .), and do not give a text path a -text override to get around this."
+            exit 1
+          fi
+          echo "No tracked text blob carries CR bytes."
+
+      - name: Refuse a tracked path with no declared treatment
+        run: |
+          set -euo pipefail
+          # An empty attr/ field means no line of .gitattributes matched the
+          # path, so its treatment came from whatever core.autocrlf the clone
+          # happened to have. That is the state this guard exists to end, and it
+          # is the state the tree was in before .gitattributes landed.
+          if ! listing=$(git ls-files --eol); then
+            echo "::error::Could not list the index. Failing closed."
+            exit 1
+          fi
+          undeclared=$(printf '%s\n' "$listing" | awk -F'\t' '
+            {
+              meta = $1; path = $2
+              p = index(meta, "attr/")
+              attr = (p > 0) ? substr(meta, p + 5) : ""
+              gsub(/[ \t]+$/, "", attr)
+              if (attr == "") print path
+            }')
+          if [ -n "$undeclared" ]; then
+            printf '%s\n' "$undeclared" | while IFS= read -r path; do
+              echo "::error file=${path}::no .gitattributes line declares this path; its treatment would come from the clone's core.autocrlf"
+            done
+            echo "::error::Add a line to .gitattributes covering these paths. The catch-all default belongs there too, written out rather than inherited."
+            exit 1
+          fi
+          echo "Every tracked path has a declared treatment."
+
+      - name: Refuse a text blob that is not valid UTF-8
+        run: |
+          set -euo pipefail
+          if ! listing=$(git ls-files --eol); then
+            echo "::error::Could not list the index. Failing closed."
+            exit 1
+          fi
+          # Only paths git holds as text. A path declared binary is exempt by
+          # construction: its bytes are the thing under test and are not
+          # required to decode as anything. An empty blob, which git reports as
+          # i/none, decodes trivially and is skipped so the object list holds
+          # only things worth reading.
+          textpaths=$(printf '%s\n' "$listing" | awk -F'\t' '
+            {
+              meta = $1; path = $2
+              if (match(meta, /^i\/[^ \t]+/)) ieol = substr(meta, RSTART + 2, RLENGTH - 2); else ieol = "?"
+              if (ieol != "-text" && ieol != "none") print ":" path
+            }')
+          if [ -z "$textpaths" ]; then
+            echo "No tracked text blob to decode."
+            exit 0
+          fi
+          # One pass over every blob rather than one process per file. The
+          # per-file shape costs a process pair per path, which is
+          # imperceptible on a runner and several seconds per path on a
+          # contributor's machine where process creation is expensive; a check
+          # nobody will wait for locally stops being run locally. --batch
+          # separates blobs with a newline, and a newline is not a UTF-8
+          # continuation byte, so a sequence truncated at the end of one blob
+          # cannot be completed by the start of the next and masked.
+          if printf '%s\n' "$textpaths" | git cat-file --batch | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1; then
+            echo "Every tracked text blob decodes as UTF-8."
+            exit 0
+          fi
+          # Something failed to decode. Naming which file is worth a process per
+          # path, because this path only runs when the tree is already red.
+          fail=0
+          while IFS= read -r spec; do
+            [ -n "$spec" ] || continue
+            if ! git cat-file blob "$spec" | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1; then
+              echo "::error file=${spec#:}::not valid UTF-8; this repository stores text as UTF-8 without a byte order mark"
+              fail=1
+            fi
+          done <<EOF
+          $textpaths
+          EOF
+          if [ "$fail" -eq 0 ]; then
+            echo "::error::The combined decode failed but no single blob did. Failing closed rather than reporting a clean tree."
+          fi
+          echo "::error::A tracked text file does not decode as UTF-8. Convert it, or declare the path binary if its bytes are the thing under test."
+          exit 1

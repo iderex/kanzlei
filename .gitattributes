@@ -1,0 +1,46 @@
+# How git treats the bytes of every tracked path.
+#
+# Without this file the treatment comes from each clone's core.autocrlf, which
+# no tree holds and no reviewer can see. Two contributors then store different
+# bytes for the same edit, and a fixture whose bytes are the thing under test
+# is rewritten on the way into the index by a setting nobody chose deliberately.
+#
+# The first line is the default and it is written out rather than inherited.
+# text=auto lets git decide text from content; eol=lf fixes the stored and the
+# checked-out line ending for everything it decides is text, on every platform.
+* text=auto eol=lf
+
+# Declared per type as well as by the default, so removing a type from this
+# list is a visible edit rather than a silent fall-through.
+*.md            text eol=lf
+*.txt           text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.json          text eol=lf
+*.toml          text eol=lf
+*.sql           text eol=lf
+*.go            text eol=lf
+*.mod           text eol=lf
+*.sum           text eol=lf
+*.sh            text eol=lf
+*.env           text eol=lf
+Dockerfile      text eol=lf
+Makefile        text eol=lf
+.gitattributes  text eol=lf
+.editorconfig   text eol=lf
+.gitignore      text eol=lf
+CONTRIBUTING.md text eol=lf
+DCO             text eol=lf
+LICENSE         text eol=lf
+NOTICE.md       text eol=lf
+README.md       text eol=lf
+
+# Generated Go files carry a marker so a reviewer can collapse them, and they
+# are still text.
+*.pb.go         text eol=lf linguist-generated=true
+
+# Fixtures whose bytes are the thing under test. binary is git's own macro for
+# -text -diff: no line-ending conversion in either direction, and the diff is
+# not rendered as text, so nothing here can be rewritten by normalisation or
+# quietly repaired by a reviewer reading a diff.
+testdata/fixtures/** binary
