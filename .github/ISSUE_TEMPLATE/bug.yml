@@ -1,0 +1,80 @@
+name: Bug report
+description: Something behaves differently from how it is documented or intended.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Not for a vulnerability. If the defect lets somebody read a document,
+        a citation, a title or a count they are not entitled to, or lets
+        somebody act as another principal, close this form and use the private
+        route in [SECURITY.md](https://github.com/iderex/kanzlei/blob/main/SECURITY.md)
+        instead. A public issue describing that defect is the disclosure the
+        project exists to prevent.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: >-
+        The released version, or the commit you built from if you built from
+        source. `kanzlei version` prints both once it is built.
+      placeholder: v0.3.1, or commit 60830a2
+    validations:
+      required: true
+
+  - type: textarea
+    id: deployment
+    attributes:
+      label: Deployment shape
+      description: >-
+        How this is running and what is around it. The container image or a
+        build from source, the host operating system, whether it sits behind a
+        reverse proxy, which datastore it is pointed at, and which sources are
+        connected.
+    validations:
+      required: true
+
+  - type: input
+    id: identity-provider
+    attributes:
+      label: Identity provider
+      description: >-
+        Which one issues the tokens, and its version if you run it yourself.
+        Say "none" if the defect reproduces without signing in.
+      placeholder: Keycloak 26.0, Entra ID, none
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: >-
+        The steps in order, starting from a state somebody else can reach.
+        Include the commands you ran and their output. Where a number is part of
+        the report, include the command that produced it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: What you expected, and what happened
+      description: >-
+        Both, separately. Where the expectation comes from a document in this
+        repository, name the file.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >-
+        Relevant log lines, with anything identifying a person or a document
+        removed. This project's logs are designed not to hold document content;
+        if yours do, that is worth reporting on its own.
+      render: text
+    validations:
+      required: false

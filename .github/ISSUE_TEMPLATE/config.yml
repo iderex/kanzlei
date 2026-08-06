@@ -1,0 +1,22 @@
+# The chooser page a reporter sees before any form is opened.
+#
+# blank_issues_enabled is false so that every issue arrives through a form that
+# asked for the evidence. The contributor guide says an issue states what is
+# wrong, what the evidence is and what done means; a blank box is where that
+# stops happening.
+#
+# The security entry is a contact link rather than a form. A form would collect
+# the vulnerability here, in public, which is the one outcome the security policy
+# exists to prevent. A contact link opens the private advisory route instead, and
+# it sits on the chooser page, so a reporter meets it before they have typed
+# anything into any form rather than inside one.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/iderex/kanzlei/security/advisories/new
+    about: >-
+      Private report, never a public issue. A vulnerability here is a document
+      disclosed to somebody who may not read it, so describing one in public is
+      the failure rather than a report of it. SECURITY.md says what is in scope
+      and what to expect.

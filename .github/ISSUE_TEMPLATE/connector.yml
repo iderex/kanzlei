@@ -1,0 +1,81 @@
+name: Connector request
+description: Ask for a source system this project can index and keep permissions for.
+labels: ["enhancement", "area: sources"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A connector is not only a way to read documents. It also has to answer,
+        for every document, who is allowed to read it, in terms this project can
+        compare against a principal. A source that cannot answer that question
+        honestly produces a connector that either does not scale or does not tell
+        the truth, so the permission questions below decide whether the connector
+        is worth building before anything else does.
+
+  - type: input
+    id: source
+    attributes:
+      label: Which source system
+      description: The product name and, where it matters, whether it is the hosted or the self-hosted edition.
+      placeholder: Nextcloud 30, self-hosted
+    validations:
+      required: true
+
+  - type: dropdown
+    id: permissions-api
+    attributes:
+      label: Can that system's permissions be read through an API
+      description: >-
+        Whether a service account can ask the source who may read a given
+        document, without signing in as each user in turn.
+      options:
+        - "Yes, per document, through a documented API"
+        - "Yes, but only per folder or per share rather than per document"
+        - "Only by impersonating each user"
+        - "No"
+        - "I do not know"
+    validations:
+      required: true
+
+  - type: textarea
+    id: permissions-detail
+    attributes:
+      label: Where that answer comes from
+      description: >-
+        Link the API documentation, or paste the call and its response with
+        anything identifying removed. If the answer above is that you do not
+        know, say what you did look at.
+    validations:
+      required: true
+
+  - type: textarea
+    id: identity-mapping
+    attributes:
+      label: How a user in that system maps to a user at your identity provider
+      description: >-
+        The field that ties the two together, and whether it is stable when
+        somebody changes their name or their address. Where groups carry the
+        permissions, say how a group is named on each side.
+    validations:
+      required: true
+
+  - type: textarea
+    id: change-notification
+    attributes:
+      label: How the source reports a change
+      description: >-
+        Whether it offers events, a change feed, or nothing but a full walk.
+        This decides how quickly a revocation can be propagated, and how far
+        behind the index can be in the meantime.
+    validations:
+      required: false
+
+  - type: textarea
+    id: scale
+    attributes:
+      label: How much is in it
+      description: >-
+        Roughly how many documents and how many principals in the deployment you
+        have in mind. An order of magnitude is enough.
+    validations:
+      required: false
