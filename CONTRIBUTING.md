@@ -113,5 +113,43 @@ step was skipped is more useful than a line implying it was not needed.
 English, in every tracked file. No attribution of authorship to a tool in
 anything tracked.
 
-Documents in this repository are plain prose. Fixtures whose bytes matter get
-their own treatment, and where that rule lands it is stated here.
+Documents in this repository are plain prose.
+
+## Text is stored the same way by everyone
+
+`.gitattributes` declares the treatment of every tracked path, starting with an
+explicit default rather than an inherited one. Text is stored with LF and
+decodes as UTF-8. Without that file the treatment comes from each clone's
+`core.autocrlf`, which is a local setting no tree holds and no reviewer can see,
+so two contributors store different bytes for the same edit.
+
+A published check reads the index rather than the working tree and refuses a
+text blob stored with CR bytes, a tracked path no attribute line covers, and a
+text blob that is not valid UTF-8. It reads the index because a checkout applies
+the conversion whose absence is the thing being looked for. If it refuses a file
+you did not think you changed, your clone predates the attributes file:
+
+    git add --renormalize .
+
+Do not give a text path a `-text` override to get past the check. That is the
+one move it cannot see through, and it is the move that puts the bytes back.
+
+## Fixtures whose bytes matter
+
+Some tests are about bytes: a document with an unusual encoding, a filename from
+a source system written on another operating system, a permission string that
+has to survive a round trip exactly. Normalisation destroys the thing those
+tests exist to prove, and it does it silently.
+
+Two rules.
+
+Encode such a fixture in source rather than committing a raw literal. A base64
+string in a test file is ASCII, so every tool leaves it alone, and the test
+decodes it back to the bytes the case is about. This is the first choice.
+
+Where a fixture is too large to inline, it goes in `testdata/fixtures/`, which
+`.gitattributes` declares binary. Nothing under that directory is converted in
+either direction and its diff is not rendered as text. A fixture whose bytes are
+not the thing under test does not belong there; put it beside the test that
+reads it, where a reviewer can read the diff. `testdata/README.md` says the same
+thing where somebody adding a file will be standing.
