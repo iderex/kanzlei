@@ -1,0 +1,16 @@
+// The complete list of functions whose returned error this repository does not
+// require to be handled. It is complete because the gate runs errcheck with
+// -excludeonly, so the tool's own built-in list is off and this file is the
+// whole rule set. Without that flag, a tool upgrade changes what is enforced
+// here without a commit in this repository.
+//
+// One entry per line, with the reason above it. An entry with no reason is an
+// exclusion nobody can argue with later.
+
+// Writing to a strings.Builder cannot fail: its Write methods are documented to
+// always return a nil error. Writing to the process's own standard error can
+// fail, and a program that cannot reach standard error has nowhere left to
+// report that it could not.
+fmt.Fprint
+fmt.Fprintf
+fmt.Fprintln

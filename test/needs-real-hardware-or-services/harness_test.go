@@ -140,7 +140,7 @@ func TestStartRefusesRatherThanFailing(t *testing.T) {
 func TestTheHarnessSuiteReportsThatItRan(t *testing.T) {
 	harness.Start(t)
 
-	if outcome, _ := harness.Outcome(); outcome != Ran {
+	if outcome, _ := harness.Outcome(); outcome != Ran { // the refusal is empty for a suite that ran, so only the outcome is read
 		t.Errorf("the harness suite reports %v after starting a case, want ran", outcome)
 	}
 }

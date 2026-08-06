@@ -1,0 +1,102 @@
+# Static analysis: what the code means, not what it looks like.
+#
+# The formatting gate catches shape. This one catches an ignored error on a path
+# where the error is the decision, a value that can be nil where it is
+# dereferenced, and a suppression comment that switches an analyser off without
+# saying why. The core promise of this project is that a check is never skipped,
+# and the cheapest place to catch a skipped check is before it ever runs.
+#
+# Three legs, and the second is two tools because no single one of them carries
+# both lenses:
+#
+#   go vet          the standard suite, which the toolchain ships and pins
+#   errcheck        an error that is returned and never looked at
+#   nilness         a value that is nil where it is used
+#   sourcecheck     a suppression comment with no reason on the same line
+#
+# The last is a Go package in this repository rather than a shell block, because
+# it decides whether the tree is acceptable and that decision has fixtures in
+# front of it. internal/sourcecheck holds it.
+name: analysis
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Read-only at the top. No job here writes anything, so no job is granted more.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    # The name published as the check. It is an interface: a protection rule
+    # names a check as a string, so renaming this silently stops it being
+    # required. #6 lists the published names beside the local command for each.
+    name: Static analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes, so do not persist the GITHUB_TOKEN in .git/config.
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # go.mod is the authority for the version. Naming one here would give
+          # this repository two, and the second would drift.
+          go-version-file: go.mod
+          check-latest: false
+
+      - name: Install the analysers at their pinned versions
+        run: |
+          set -euo pipefail
+          # Pinned by module version, which is the same kind of pin the actions
+          # above carry. An unpinned analyser changes what this gate enforces
+          # without a commit in this repository.
+          go install github.com/kisielk/errcheck@v1.9.0
+          go install golang.org/x/tools/go/analysis/passes/nilness/cmd/nilness@v0.38.0
+
+      - name: The standard vet suite
+        run: |
+          set -euo pipefail
+          # Twice, because a build constraint hides code from an analyser as
+          # effectively as deleting it. The harness in test/ is only compiled
+          # under its tag, and an unexamined suite is where a defect sits
+          # longest.
+          go vet ./...
+          go vet -tags needsreal ./...
+
+      - name: Errors that are returned and never looked at
+        run: |
+          set -euo pipefail
+          # -excludeonly turns the tool's own built-in exclusion list off, so
+          # .errcheck-excludes is the whole rule set and a tool upgrade cannot
+          # change what is enforced here without a commit. -asserts adds the
+          # ignored type assertion result, which is the same defect wearing a
+          # different syntax.
+          errcheck -excludeonly -exclude .errcheck-excludes -asserts ./...
+          errcheck -excludeonly -exclude .errcheck-excludes -asserts -tags needsreal ./...
+
+      - name: Values that are nil where they are used
+        run: |
+          set -euo pipefail
+          nilness=$(go env GOPATH)/bin/nilness
+          go vet -vettool="$nilness" ./...
+          go vet -tags needsreal -vettool="$nilness" ./...
+
+      - name: Suppressions with no reason
+        run: |
+          set -euo pipefail
+          # The check is a test, so it also runs in whatever gate runs the
+          # suite. It is run here as well because this is the gate its subject
+          # belongs to, and a reader looking for what refuses a bare suppression
+          # should find it in the analysis job.
+          go test ./internal/sourcecheck -run TestThisRepositoryHoldsNoBareSuppression -count=1 -v

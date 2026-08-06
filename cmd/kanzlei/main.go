@@ -113,7 +113,7 @@ func stopWhenClosed(parent context.Context, r io.Reader) context.Context {
 		defer cancel()
 		// Nothing is read from standard input, so everything read is discarded.
 		// What is being waited for is the end of it.
-		_, _ = io.Copy(io.Discard, r)
+		_, _ = io.Copy(io.Discard, r) // a read error ends the wait exactly as end of file does, and both mean stop
 	}()
 	return ctx
 }

@@ -16,7 +16,8 @@ what it needs, starts it and stops it. Logic that is worth testing does not live
 here, because a `main` package is awkward to reuse and its tests cannot be
 imported by anything else.
 
-`internal/` holds everything the binary is made of. It is `internal` on purpose:
+`internal/` holds everything the binary is made of, and one package that is not:
+a check this repository runs against its own source. It is `internal` on purpose:
 nothing outside this module can import any of it, so no part of this tree
 becomes somebody's dependency by accident and every package here can be changed
 without an argument about who else is using it.
@@ -56,6 +57,13 @@ from one.
 `internal/build` reports which version this binary is and which commit it was
 built from. It imports nothing from this module and never will, so anything may
 import it.
+
+`internal/sourcecheck` is the exception to the sentence above: it is not part of
+the binary and nothing imports it. It reads this repository's own Go source and
+refuses what no analyser can see, which today is a suppression comment carrying
+no reason. It lives here rather than in a shell block inside a workflow because
+it decides whether the tree is acceptable, and that decision is worth having
+fixtures in front of it.
 
 `internal/server` holds the HTTP surface: the routing table, the listener and
 the shutdown. Handlers live here. What a handler calls does not.

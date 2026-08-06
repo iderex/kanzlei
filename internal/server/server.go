@@ -88,5 +88,5 @@ func live(w http.ResponseWriter, _ *http.Request) {
 	// at this stage of the project is everything, so it answers the one bit it
 	// was asked for and discloses nothing else.
 	w.WriteHeader(http.StatusOK)
-	_, _ = io.WriteString(w, "ok\n")
+	_, _ = io.WriteString(w, "ok\n") // the header is already sent, so a write error has nowhere left to be reported
 }

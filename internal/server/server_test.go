@@ -66,7 +66,7 @@ func TestPortZeroReportsTheChosenPort(t *testing.T) {
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(ctx)
+		_ = srv.Shutdown(ctx) // cleanup after the case has already reported, where a shutdown error changes no verdict
 	})
 
 	if addr := srv.Addr(); addr == "" || addr == "127.0.0.1:0" {
@@ -90,7 +90,7 @@ func TestServeThenShutdownIsNotAnError(t *testing.T) {
 		t.Fatalf("get liveness: %v", err)
 	}
 	body, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close() // the body is fully read above, so a close error says nothing about it
 	if err != nil {
 		t.Fatalf("read body: %v", err)
 	}
