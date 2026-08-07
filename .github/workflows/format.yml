@@ -1,0 +1,77 @@
+# Formatting: the shape of every tracked file, decided once and enforced.
+#
+# The static analysis gate catches what the code means. This one catches what it
+# looks like, over the whole tree rather than over the Go in it. Markdown and
+# YAML drift the way source does, and several issues in this plan put their
+# done-condition inside a document, so the documents are load bearing and are
+# formatted by the same rule set as the code.
+#
+# The rule set is .editorconfig at the root, which editors read as a courtesy
+# and cmd/treefmt reads as a rule. One file, so a rule changes in one place. A
+# property .editorconfig names and cmd/treefmt does not implement is refused
+# when the file is parsed, because a rule nothing applies is worse than no rule:
+# the tree then looks governed and is not.
+#
+# The decision is a program in this repository rather than a shell block. It
+# reads a rule set, walks the tree and judges each file against a pattern match,
+# which is exactly the kind of decision docs/decisions/0001-means.md keeps
+# somewhere fixtures can be put in front of it. internal/treefmt holds the
+# fixtures, including the near misses: a raw string literal whose trailing space
+# is data, a tab inside a line rather than at the head of it, and a pattern
+# whose brace group would match its own literal text.
+name: format
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Read-only. The check reports; it does not rewrite the tree. Formatting a
+# contributor's branch for them would hide the thing this gate exists to show.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    # The name published as the check. It is an interface: a protection rule
+    # names a check as a string, so renaming this silently stops it being
+    # required. #6 is where the published names are settled.
+    name: Formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes, so do not persist the GITHUB_TOKEN in .git/config.
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # go.mod is the authority for the version. Naming one here would give
+          # this repository two, and the second would drift.
+          go-version-file: go.mod
+          check-latest: false
+
+      - name: Every tracked file, against the rule set the tree holds
+        run: |
+          set -euo pipefail
+          # The same command CONTRIBUTING.md names, character for character. A
+          # check reproduced by a different command is a different check, and
+          # the one nobody runs locally is the one that goes red here for a
+          # reason the contributor cannot see.
+          go run ./cmd/treefmt
+
+      - name: The rule set is read by its own fixtures, not only by the tree
+        run: |
+          set -euo pipefail
+          # The step above is green whenever the tree happens to be formatted,
+          # which proves the state of the tree and not the guard. These are the
+          # cases that prove the guard: each one is a file that departs from a
+          # rule, and each one has to be refused for the rule it departs from.
+          go test ./internal/treefmt ./cmd/treefmt -count=1
