@@ -1,0 +1,87 @@
+# Whether a pull request names the work it belongs to.
+#
+# CONTRIBUTING.md says every change starts as an issue. Nothing read a pull
+# request to see whether one was named, so a change that closes nothing and
+# references nothing merged as easily as one that did, and the cost lands a year
+# later on somebody trying to work out why a line exists.
+#
+# This job gathers the inputs and takes no decision. internal/prhygiene holds
+# the decision and its fixtures, because a rule with near misses belongs where a
+# case can be put in front of it rather than in a shell block. cmd/prhygiene is
+# the argument parsing over it.
+#
+# Two tiers, and only one of them is red. The refusing tier is the link: the
+# body names an issue and every commit subject names one. The warning tier is
+# the size, which never blocks, because a bulk rename, a document migration or a
+# first implementation passes any cap legitimately.
+name: pr-hygiene
+
+on:
+  # A pull request only. This job reasons about the request rather than about
+  # the tree, so there is nothing for it to read on a push, and a direct push to
+  # the default branch is refused by the ruleset rather than by a check.
+  pull_request:
+    branches: ["**"]
+
+# Read-only. The body arrives in the event payload and no API call is made.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hygiene:
+    name: Pull request hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history, because the range this judges is the branch back
+          # to where it left the base, and a shallow clone has no merge base.
+          fetch-depth: 0
+          # No step pushes, so do not persist the GITHUB_TOKEN in .git/config.
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # The toolchain version is the one go.mod names, so this file does not
+          # hold a second opinion about it.
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Gather what the request is
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # The merge base rather than the base branch tip. A branch that has
+          # been open while something else landed is behind the tip, and a
+          # range from the tip would report the other change's commits as this
+          # request's.
+          base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+          git log --format=%p%x09%s "$base..$HEAD_SHA" > "$RUNNER_TEMP/commits.tsv"
+          # Lines added plus removed. A binary file's numstat columns are a
+          # dash, which awk reads as zero, so a binary change counts as no
+          # lines rather than failing the sum.
+          changed=$(git diff --numstat "$base" "$HEAD_SHA" | awk '{a += $1; r += $2} END {print a + r + 0}')
+          # A file in the run's own temporary directory rather than GITHUB_ENV.
+          # The environment file is read by every later step of the job, and a
+          # value that only the next step needs does not belong in it.
+          echo "$changed" > "$RUNNER_TEMP/changed"
+          echo "Judging $(wc -l < "$RUNNER_TEMP/commits.tsv") commit(s) and $changed changed line(s)."
+
+      - name: Refuse a request that names no issue
+        env:
+          # The body is written by whoever opened the request. It arrives as an
+          # environment variable and is never expanded into the command line,
+          # because text somebody else wrote has no business being parsed by a
+          # shell.
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          go run ./cmd/prhygiene -changed "$(cat "$RUNNER_TEMP/changed")" < "$RUNNER_TEMP/commits.tsv"
