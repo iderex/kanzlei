@@ -15,9 +15,9 @@ import (
 	"github.com/iderex/kanzlei/internal/authz"
 )
 
-// session is the moment every case below resolves at. A fixed value rather
+// resolvedAt is the moment every case below resolves at. A fixed value rather
 // than time.Now, so that nothing here is a different test tomorrow.
-var session = time.Date(2026, 3, 4, 9, 0, 0, 0, time.UTC)
+var resolvedAt = time.Date(2026, 3, 4, 9, 0, 0, 0, time.UTC)
 
 // alice is the same person in three naming schemes, which is the situation
 // this package exists for.
@@ -45,7 +45,7 @@ func mustMap(t *testing.T, entries ...MappingEntry) Mapping {
 
 func mustResolve(t *testing.T, claims Claims, mapping Mapping) Principal {
 	t.Helper()
-	principal, err := Resolve(claims, mapping, session)
+	principal, err := Resolve(claims, mapping, resolvedAt)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -69,8 +69,8 @@ func TestAPrincipalCarriesEveryNameThisSessionResolved(t *testing.T) {
 	if !slices.Equal(principal.Groups, []string{"legal-team"}) {
 		t.Fatalf("Groups = %v, want the groups the provider issued", principal.Groups)
 	}
-	if !principal.GroupsResolvedAt.Equal(session) {
-		t.Fatalf("GroupsResolvedAt = %v, want %v", principal.GroupsResolvedAt, session)
+	if !principal.GroupsResolvedAt.Equal(resolvedAt) {
+		t.Fatalf("GroupsResolvedAt = %v, want %v", principal.GroupsResolvedAt, resolvedAt)
 	}
 	if got := principal.Sources(); !slices.Equal(got, []SourceID{fileServer, mailStore}) {
 		t.Fatalf("Sources() = %v, want the two this subject is configured into", got)
@@ -213,11 +213,11 @@ func TestNewMappingRefusesAHalfWrittenEntry(t *testing.T) {
 	}
 }
 
-// TestResolveRefusesClaimsWithNoSubject covers the half-populated session. An
+// TestResolveRefusesClaimsWithNoSubject covers the half-populated resolvedAt. An
 // empty subject would match a mapping keyed on an empty subject, and an empty
 // principal is exactly what a broken sign-on hands over.
 func TestResolveRefusesClaimsWithNoSubject(t *testing.T) {
-	_, err := Resolve(Claims{Groups: []string{"legal-team"}}, Mapping{}, session)
+	_, err := Resolve(Claims{Groups: []string{"legal-team"}}, Mapping{}, resolvedAt)
 	if !errors.Is(err, ErrNoSubject) {
 		t.Fatalf("err = %v, want %v", err, ErrNoSubject)
 	}
@@ -261,10 +261,10 @@ func TestASourceAssertionIsRecordedAsOne(t *testing.T) {
 func TestGroupsCarryTheirAge(t *testing.T) {
 	principal := mustResolve(t, alice, mustMap(t))
 
-	if principal.GroupsAreStale(session.Add(MaxGroupAge)) {
+	if principal.GroupsAreStale(resolvedAt.Add(MaxGroupAge)) {
 		t.Fatal("membership exactly at the maximum age was called stale")
 	}
-	if !principal.GroupsAreStale(session.Add(MaxGroupAge + time.Second)) {
+	if !principal.GroupsAreStale(resolvedAt.Add(MaxGroupAge + time.Second)) {
 		t.Fatal("membership past the maximum age was not called stale")
 	}
 }
