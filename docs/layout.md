@@ -83,6 +83,12 @@ parsing over it and takes no decision of its own.
 `internal/server` holds the HTTP surface: the routing table, the listener and
 the shutdown. Handlers live here. What a handler calls does not.
 
+`internal/audit` declares the one record shape every event in this project is
+written as, and refuses a record that could not be queried as intended. It
+writes nothing and stores nothing. [audit.md](audit.md) is generated from that
+declaration rather than written by hand, and the test that generates it also
+compares it, so the two cannot drift.
+
 `internal/auth` turns what an identity provider said about a user into a
 principal that a source system's permissions can be compared against: the
 subject identifier, the groups resolved for the session and how old that
