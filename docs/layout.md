@@ -67,18 +67,26 @@ from one.
 built from. It imports nothing from this module and never will, so anything may
 import it.
 
-`internal/sourcecheck` is the first exception to the sentence above: it is not
-part of the binary and nothing imports it. It reads this repository's own Go source and
-refuses what no analyser can see, which today is a suppression comment carrying
-no reason. It lives here rather than in a shell block inside a workflow because
-it decides whether the tree is acceptable, and that decision is worth having
-fixtures in front of it.
+Three packages here are the exceptions to the sentence above. None of them is
+part of the binary, nothing in the service imports any of them, and each lives
+here rather than in a shell block inside a workflow because it decides whether
+the tree is acceptable, and that decision is worth having fixtures in front of
+it. They are not enumerated anywhere else; this is the note that says what each
+directory is for, and it is where they belong.
 
-`internal/coverfloor` is the second exception, for the same reason as the first:
-it is not part of the binary and the service imports nothing from it. It reads a
-coverage profile, reports what share of statements the run reached, and decides
-whether that clears the floor the tree holds. `cmd/coverfloor` is the argument
-parsing over it and takes no decision of its own.
+`internal/sourcecheck` reads this repository's own Go source and refuses what no
+analyser can see, which today is a suppression comment carrying no reason.
+
+`internal/coverfloor` reads a coverage profile, reports what share of statements
+the run reached, and decides whether that clears the floor the tree holds.
+`cmd/coverfloor` is the argument parsing over it and takes no decision of its
+own.
+
+`internal/testreach` reads this repository's own test files and refuses a test in
+the default run that dials an address which is not a loopback one, resolves a
+name, or opens a device, and refuses a marked file that is not under `test/`. It
+exists because the condition in #7 cannot be enforced from inside a test
+process, and it is the half of that condition which can be read out of the tree.
 
 `internal/importrules` is the third, and it is the one that reads this note.
 It decides whether the import graph inside this module is the one

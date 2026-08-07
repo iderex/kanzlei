@@ -72,7 +72,7 @@ func TestTheProcessStartsAnswersAndExitsCleanly(t *testing.T) {
 
 	addr := readListeningAddress(t, stdout)
 
-	resp, err := http.Get("http://" + addr + "/livez")
+	resp, err := http.Get("http://" + addr + "/livez") // loopback: the address is the one this case's own child process was told to bind and printed back
 	if err != nil {
 		t.Fatalf("get liveness at %s: %v (stderr %q)", addr, err, stderr.String())
 	}

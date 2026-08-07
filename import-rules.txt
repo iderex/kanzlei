@@ -57,6 +57,7 @@ internal/server: internal/retrieval
 internal/coverfloor:
 internal/importrules:
 internal/sourcecheck:
+internal/testreach:
 internal/treefmt:
 
 # The permission model, and what these three lines carry is again the absence.
