@@ -83,6 +83,69 @@ What that measures is which documents `internal/authz` admits for the mapped
 principal. It is not which documents a retrieval route returns, because there
 is no retrieval route in this tree yet. #62 is where that layer arrives.
 
+## Where the groups come from
+
+A provider delivers membership in one of three shapes: a claim holding group
+names, a claim holding opaque identifiers, or nothing in the token at all
+because it answers a second call instead. Which one a deployment is on is
+configuration, and so is which claim carries the values.
+
+Nothing here guesses. There is no list of likely claim names, no fallback from
+one claim to another, and `TestNoClaimNameIsWrittenIntoTheSource` reads
+`internal/auth/groups.go` and refuses one being written in. A deployment that
+names the wrong claim resolves no groups and gets an operator who can see why,
+which is the failure that can be fixed. A deployment that guessed gets the
+failure that cannot: a claim that happened to match, resolving memberships
+nobody configured.
+
+Every claim value is mapped to an application group, and the mapping is the
+whole rule. There is no fallback that treats an unmapped value as a group name
+of its own.
+
+### An unmapped value fails the sign-on
+
+It is not dropped. A dropped value is a permission change nobody asked for, and
+it is invisible from the user's side: they sign in, see less than they should,
+and report it as a search that found nothing. `ErrUnmappedClaim` names the
+value, so what an operator meets is a configuration problem with an address.
+
+### Too many groups fails the sign-on
+
+The number of values a session may carry is bounded and exceeding the bound is
+refused rather than truncated. A truncated list is the same silent permission
+change in the other direction, and which values survived depends on the order
+the provider happened to send them in, so the same user can get different
+access on two consecutive sign-ons.
+
+The bound is checked before the mapping, so a session that is both too large
+and carries an unmapped value is reported as too large. That is the one an
+operator fixes first.
+
+### Once per session
+
+Groups are resolved when a `Session` is built and there is no method that
+resolves them again, so the second call into a provider cannot end up on the
+request path by accident. A provider call that fails fails the sign-on, because
+a session with no groups because the call failed looks exactly like a user who
+is in no groups.
+
+### Administrative rights come from a mapped group
+
+The groups a policy names as administrative are application groups, which is to
+say the output of the mapping. A user who can influence what the provider puts
+in a claim still cannot reach one, because the value they inject has no mapping
+and the sign-on fails.
+
+`TestNoAdministrativeRightIsReadFromAClaim` refuses the decision reaching a
+token or a claim at all. A policy naming an administrative group that no
+mapping entry produces is refused too: it reads as a grant and is not one, and
+an operator reading the configuration would believe otherwise.
+
+This grants nothing over a document. `internal/authz` has no administrative
+branch and this adds none; a document is reached through its permission set or
+not at all. Nothing in this tree consumes the flag yet, and #34 is where an
+administrative route first exists.
+
 ## Group membership and how old it may be
 
 Membership is resolved once per session, at a stated moment the principal
@@ -106,10 +169,14 @@ sessions, which is #31.
 
 ## What is not decided here
 
-Group names pass through as the provider issued them. A source that names its
-groups differently sees group entries matching nothing, which errs towards
-refusal. Mapping a group claim into a source's own groups, and refusing a claim
-that maps into none, is #30.
+Application group names pass through to a source unchanged. #30 maps a
+provider's claim values into this application's groups and refuses a value that
+maps into none, which is the section above. It does not map an application
+group into a source system's own group identifiers, and no issue on this board
+names that step today. A source naming its groups differently therefore sees
+group entries matching nothing, which errs towards refusal rather than towards
+access, and a deployment relying on group-granted access into such a source
+would find it silently absent.
 
 Nested groups are flattened before they reach here, or the connector declares
 them unresolved. This package has no way to tell the two apart, and the

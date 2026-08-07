@@ -258,12 +258,14 @@ func (p Principal) GroupsAreStale(now time.Time) bool {
 // rather than a broader principal. That is deliberate, and
 // TestIgnoringTheSecondResultStillRefuses holds it.
 //
-// The groups pass through as the provider issued them, which is correct only
-// for a source that names groups the way the provider does. Mapping a group
-// claim into a source's own group identifiers, and refusing a claim that maps
-// into none, is #30. Until that lands, a source whose groups are named
-// differently sees group entries that match nothing, which errs towards
-// refusal rather than towards access.
+// The groups pass through as this application names them, which is correct
+// only for a source that names groups the same way. #30 is the step before
+// this one, from the provider's claim values into application groups, and it
+// refuses a value that maps into none. The step after it, from an application
+// group into a source system's own group identifiers, is named by no issue on
+// this board today. Until it exists, a source that names its groups
+// differently sees group entries matching nothing, which errs towards refusal
+// rather than towards access.
 func (p Principal) ForSource(source SourceID) (authz.Principal, bool) {
 	identity, mapped := p.IdentityIn(source)
 	if !mapped {
