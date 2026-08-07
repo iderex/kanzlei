@@ -12,6 +12,17 @@
 # and not in a reproduction. It comes with the toolchain, so it costs an
 # argument here and no installation step.
 #
+# The run happens with no display, no administrative rights, no accelerator and
+# no route out. Those are conditions of the run rather than of the job: the job
+# needs a route to check the tree out and to fetch the toolchain, and the route
+# is taken away afterwards, from the user the suite runs as. That user is made
+# for the suite rather than being the one the job started as, because the job
+# reports what happened over the same route and a rule aimed at its own user
+# takes the report with it. The step that proves it is gone runs before the
+# suite, because a rule that failed to install would otherwise leave a suite
+# with a route and a log saying it had none, and it proves both directions: no
+# route for the suite, and a route still there for the job that says so.
+#
 # Coverage comes out of that same run rather than out of a second one. A second
 # run measures a second thing, and the two disagree the first time a test is
 # flaky. The floor is then judged by a program in this repository rather than by
@@ -57,7 +68,104 @@ jobs:
           go-version-file: go.mod
           check-latest: false
 
+      - name: No display, no administrative rights, no accelerator
+        run: |
+          set -euo pipefail
+          fail=0
+          if [ -n "${DISPLAY:-}" ]; then
+            echo "::error::DISPLAY is set to ${DISPLAY}; the default run is supposed to have no display server"
+            fail=1
+          fi
+          if [ "$(id -u)" = "0" ]; then
+            echo "::error::this job runs as root; the default run is supposed to have no administrative rights"
+            fail=1
+          fi
+          # Only the device nodes that mean an accelerator is attached. /dev/dri
+          # is deliberately not among them: it is present for software
+          # rendering on ordinary machines, so refusing it would refuse a
+          # machine that has no accelerator at all.
+          accelerators=$(ls -d /dev/nvidia* /dev/kfd 2>/dev/null || true)
+          if [ -n "$accelerators" ]; then
+            echo "::error::accelerator devices are present: ${accelerators}"
+            fail=1
+          fi
+          [ "$fail" -eq 0 ] || exit 1
+          echo "uid $(id -u), DISPLAY unset, no accelerator device"
+
+      - name: Take the route out away from the user the suite runs as
+        run: |
+          set -euo pipefail
+          # This is where the distinction #7 asks for is made. The JOB has a
+          # route out and needs one: the checkout and the toolchain both come
+          # over it. The DEFAULT RUN does not. So the route is removed from the
+          # user the suite runs as, after everything that needed one has already
+          # happened, rather than from the whole job.
+          #
+          # It is done from outside the test process because Go offers no hook a
+          # test package can install to refuse a connection made by code that
+          # builds its own dialler. sudo appears here and in the two steps that
+          # follow, to install the rule and to drop into the user it names. The
+          # suite itself runs unelevated, as a user with fewer rights than the
+          # one the job started with.
+          #
+          # The user is made here rather than reusing the job's own, and that is
+          # the difference between a run that says something and a run that says
+          # nothing. The rule matches on the owning user, so pointing it at the
+          # job's user takes the route away from everything running as that
+          # user, including whatever reports which step finished. Five runs
+          # against this branch stopped reporting at or after this step and
+          # ended with no verdict; the runs and the reasoning are in #7.
+          sudo useradd --create-home --shell /bin/bash suite
+          uid="$(id -u suite)"
+          sudo iptables -I OUTPUT 1 -m owner --uid-owner "$uid" ! -o lo -j REJECT
+          sudo ip6tables -I OUTPUT 1 -m owner --uid-owner "$uid" ! -o lo -j REJECT
+          # The stub resolver listens on loopback, so the rule above leaves name
+          # resolution working. A test that resolves a name is reaching off this
+          # machine whatever the first hop looks like.
+          sudo iptables -I OUTPUT 1 -m owner --uid-owner "$uid" -d 127.0.0.53 -j REJECT
+          # The suite reads the checkout and writes its coverage profile into
+          # it, and it is no longer the user that checked it out. The checkout
+          # also sits under the job user's home directory, which nobody else may
+          # traverse, so the chain above it is opened for traversal only. The
+          # chain is walked rather than written out, because a path spelled here
+          # is a second place that has to know where a checkout lands.
+          d="$GITHUB_WORKSPACE"
+          while [ "$d" != "/" ]; do
+            sudo chmod o+x "$d"
+            d="$(dirname "$d")"
+          done
+          chmod -R a+rwX "$GITHUB_WORKSPACE"
+
+      - name: Prove the route is gone before anything is read into the run
+        run: |
+          set -euo pipefail
+          # Without this, a rule that failed to install would leave a suite
+          # running with a route out and a log saying it had none. The address
+          # is one this job has already reached in an earlier step, so a success
+          # here means the route is still there rather than that the target
+          # happened to be up.
+          if sudo -u suite -H curl --max-time 10 -sS -o /dev/null https://api.github.com/; then
+            echo "::error::the user the suite runs as still has a route out; the run that follows would not be offline"
+            exit 1
+          fi
+          echo "no route out of the user the suite runs as"
+          # The positive control, and it is what tells an aimed rule apart from
+          # one that took the machine's route with it. The job reaches the same
+          # address it has already reached, so the failure above is a statement
+          # about that user rather than about the network.
+          curl --max-time 10 -sS -o /dev/null https://api.github.com/
+          echo "the job that reports this run still has one"
+          # There is no separate positive control for loopback. The suite is
+          # one: internal/server binds a listener on 127.0.0.1 and fetches from
+          # it, and cmd/kanzlei starts the binary and asks it whether it is
+          # alive. A rule that had taken loopback with it would redden both.
+
       - name: The default suite, with the race detector, producing coverage
+        env:
+          # An accidental module fetch fails here rather than hanging against a
+          # route that is no longer there.
+          GOPROXY: "off"
+          GOFLAGS: "-mod=mod"
         run: |
           set -euo pipefail
           # -covermode=atomic rather than the default, because the default
@@ -67,7 +175,14 @@ jobs:
           # ./... is every package in the module. The harness under test/ is
           # behind a build constraint, so this compiles it, finds no test files
           # and says so; nothing here has to remember to exclude it.
-          go test -race -covermode=atomic -coverprofile=coverage.out ./...
+          #
+          # Run as the user the rule above names, which is the whole point: the
+          # command is the one CONTRIBUTING.md gives, and what differs is who
+          # runs it. PATH carries the toolchain the setup step put there, and
+          # the two variables are forwarded rather than inherited because sudo
+          # does not carry an environment across.
+          sudo -u suite -H env "PATH=$PATH" "GOPROXY=$GOPROXY" "GOFLAGS=$GOFLAGS" \
+            go test -race -covermode=atomic -coverprofile=coverage.out ./...
 
       - name: The coverage floor
         run: |

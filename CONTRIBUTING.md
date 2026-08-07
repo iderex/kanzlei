@@ -156,6 +156,45 @@ The check reads the position rather than the type: the last return value is the
 error by convention in every Go program, so a blank anywhere else is left alone
 and an ordinary destructuring is not caught by this.
 
+### Formatting
+
+The check is published as `Formatting`. Two commands, and the first is the one
+that check runs, character for character:
+
+    go run ./cmd/treefmt
+    go run ./cmd/treefmt -write
+
+The first reports and writes nothing. It prints every departure as a path, a
+line and the rule that was departed from, and exits non-zero. The second puts
+the bytes the rule set asks for into the files. Both come out of the same call,
+so the mode that checks and the mode that writes cannot disagree about what
+formatted means.
+
+`.editorconfig` at the root is the whole rule set, and this document does not
+restate it. Editors read that file as a courtesy and `cmd/treefmt` reads it as a
+rule, so there is one rule set and not two. Where a rule is off, the line in
+that file says why. A property written there that `internal/treefmt` does not
+implement is refused when the file is parsed rather than passed over: a rule
+nothing applies is worse than no rule, because the tree then looks governed and
+is not.
+
+Two things the tool reports and deliberately does not repair. Bytes that do not
+decode as UTF-8, because rewriting them would put a guess at an encoding into
+the tree. And a space indent on a path the rule set indents with tabs, because
+how many spaces stand for one tab is not a thing a formatter gets to decide.
+
+A `.go` file is formatted by `go/format` and by nothing else. A line-based rule
+cannot see the inside of a raw string literal, so trimming a trailing space
+there would silently edit a program's data.
+
+The scope is every path `git ls-files` reports. A file you have not added is not
+the tree, and a build output reported as a defect in the tree is how a gate
+teaches people to ignore it.
+
+If it reports a carriage return in a file you did not touch, your working copy
+predates `.gitattributes`. `go run ./cmd/treefmt -write` fixes it, and so does a
+fresh checkout of that file.
+
 ## The default suite
 
 One command, and it is the command the check runs:
@@ -203,12 +242,44 @@ rights, no accelerator and no outbound network, and a test that needs any of
 those is marked and excluded from the default run by configuration rather than
 by a flag anybody has to remember.
 
-There is no command here that lists the marked tests. That comes from #7, which
-establishes the condition and the marking mechanism, alongside #8, which is the
-separate harness for the tests that genuinely need a real service or real
-hardware and which has landed. Until #7 lands, the sentence above is the rule
-and nothing enforces it: the default suite runs on a hosted runner that happens
-to have a route out, and nothing refuses a test that uses it.
+What is marked is printed rather than listed here:
+
+    go test -tags needsreal -list '.*' ./test/...
+
+The marking is a build constraint, `//go:build needsreal`, and the marked files
+live under `test/`. Both halves matter: the constraint is what excludes them
+from `go test ./...` without anybody remembering a flag, and the directory is
+what makes the command above a complete list rather than a partial one. A marked
+file anywhere else would be excluded from the default run and absent from the
+listing, and `internal/testreach` refuses that.
+
+The condition binds the run and not the job. The check has a route out while it
+checks the tree out and installs the toolchain, and that route is taken away
+from the user the suite runs as before the suite starts. The step that proves it
+is gone runs first, so a rule that failed to install reddens the check instead of
+producing a suite that had a route and a log saying it had none.
+
+Inside the process, `internal/testreach` reads the test files and refuses a test
+in the default run that dials an address which is not a loopback one, resolves a
+name, or opens a device. It runs as part of the default suite, so the refusal
+arrives with a file and a line rather than as a connection error somebody reads
+as a defect in the code under test.
+
+Where a test dials a loopback address the check cannot read, because the address
+came from a listener it started a moment earlier, the reason goes on the same
+line, in the shape the analyser suppressions use:
+
+    resp, err := http.Get("http://" + addr + "/livez") // loopback: the address this case's own child process printed
+
+That reason excuses only an address the check could not read. An address written
+out in the source and pointing off this machine is refused whatever comment sits
+beside it.
+
+What this does not reach: a test that calls a helper which dials, a dial through
+an interface value, and a reason comment that is simply wrong. It reads direct
+calls through a package selector and nothing else. It is a floor under the
+condition rather than a proof of it, and #114 is where the condition is
+re-proved later from a run rather than from source.
 
 The default gate does not run `test/needs-real-hardware-or-services/`, because
 a check that needs a model, an identity provider or a source system is a check
