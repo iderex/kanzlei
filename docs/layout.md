@@ -83,6 +83,13 @@ parsing over it and takes no decision of its own.
 `internal/server` holds the HTTP surface: the routing table, the listener and
 the shutdown. Handlers live here. What a handler calls does not.
 
+`internal/authz` resolves a permission set against a principal and answers
+whether the document may be shown. It is pure: it reads no source system, holds
+no clock and takes no decision about who the principal is, so the same set and
+the same principal always produce the same answer. It imports nothing from this
+module. [permissions.md](permissions.md) states the rule it holds and names the
+test behind each sentence of it.
+
 ## The import rules
 
 Two of them, and they are the reason this note exists rather than a preference
