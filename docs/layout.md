@@ -83,6 +83,13 @@ parsing over it and takes no decision of its own.
 `internal/server` holds the HTTP surface: the routing table, the listener and
 the shutdown. Handlers live here. What a handler calls does not.
 
+`internal/auth` turns what an identity provider said about a user into a
+principal that a source system's permissions can be compared against: the
+subject identifier, the groups resolved for the session and how old that
+resolution is, and the per-source identifiers with how each one was
+established. It imports `internal/authz` and nothing else from this module.
+[principal.md](principal.md) is where the mapping rules are argued.
+
 `internal/authz` resolves a permission set against a principal and answers
 whether the document may be shown. It is pure: it reads no source system, holds
 no clock and takes no decision about who the principal is, so the same set and
