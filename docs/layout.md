@@ -89,6 +89,26 @@ imports it.
 `internal/server` holds the HTTP surface: the routing table, the listener and
 the shutdown. Handlers live here. What a handler calls does not.
 
+`internal/audit` declares the one record shape every event in this project is
+written as, and refuses a record that could not be queried as intended. It
+writes nothing and stores nothing. [audit.md](audit.md) is generated from that
+declaration rather than written by hand, and the test that generates it also
+compares it, so the two cannot drift.
+
+`internal/auth` turns what an identity provider said about a user into a
+principal that a source system's permissions can be compared against: the
+subject identifier, the groups resolved for the session and how old that
+resolution is, and the per-source identifiers with how each one was
+established. It imports `internal/authz` and nothing else from this module.
+[principal.md](principal.md) is where the mapping rules are argued.
+
+`internal/authz` resolves a permission set against a principal and answers
+whether the document may be shown. It is pure: it reads no source system, holds
+no clock and takes no decision about who the principal is, so the same set and
+the same principal always produce the same answer. It imports nothing from this
+module. [permissions.md](permissions.md) states the rule it holds and names the
+test behind each sentence of it.
+
 ## The import rules
 
 They are the reason this note exists rather than a preference about tidiness.

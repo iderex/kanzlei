@@ -1,0 +1,67 @@
+# The whitespace rule set, held in the tree rather than left to a tool's
+# defaults.
+#
+# This file is read by editors and by cmd/treefmt, which is the thing that
+# refuses a violation. That is deliberate: an editor setting is a courtesy and
+# a check is a rule, and they disagree the moment somebody contributes from an
+# editor that does not read this format. Both read the same file, so there is
+# one rule set and not two.
+#
+# internal/treefmt reads a subset of the EditorConfig properties and refuses a
+# property or a value it does not implement, rather than passing over it. A
+# rule written here and silently ignored is worse than no rule, because the
+# tree then looks governed and is not.
+#
+# Where a rule is off, the line says why. "unset" is EditorConfig's own way of
+# turning an inherited rule off, and every one of them below carries its
+# reason.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.go]
+# Tabs, because the toolchain's own formatter emits tabs and nothing here gets
+# to argue with it. go/format is the authority for the body of a .go file and
+# treefmt runs it before the rules above are applied, so this line records what
+# the formatter already guarantees rather than deciding it.
+indent_style = tab
+
+[{go.mod,go.sum}]
+# Tabs, because the toolchain writes these files itself and indents a require
+# block with one. This line records what `go mod tidy` already does. Without it
+# the rule above would make the tree red on the day the first dependency lands,
+# for a shape no contributor chose and none can change.
+indent_style = tab
+
+[*.{yml,yaml}]
+# Two, which is what the workflow files already use and what the format's own
+# convention is. A tab in YAML indentation is a syntax error, so the rule above
+# is doing real work here rather than settling a preference.
+indent_size = 2
+
+[*.md]
+# unset, with the reason: a fenced or indented block in a document holds source
+# in some other language, and Go is indented with tabs. Rewriting the
+# indentation inside such a block edits the example the document is showing,
+# which is a change to meaning made by a formatter.
+indent_style = unset
+
+[testdata/fixtures/**]
+# unset and off, all of it, with the reason: .gitattributes declares this
+# directory binary because the bytes are the thing under test. A fixture exists
+# to prove that an unusual encoding, a carriage return or a trailing space
+# survives a round trip, and a formatter that normalised it would delete the
+# case while leaving the test that reads it green.
+charset = unset
+end_of_line = unset
+insert_final_newline = false
+trim_trailing_whitespace = false
+indent_style = unset
+indent_size = unset
