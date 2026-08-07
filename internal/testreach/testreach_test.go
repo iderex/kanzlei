@@ -121,6 +121,61 @@ func TestAOneWordReasonExcusesNothing(t *testing.T) {
 	}
 }
 
+// A call with nothing where the address goes is refused rather than passed
+// over. It is not code that compiles, and this check reads source that has not
+// been through a compiler, so the shape reaches it: a half-finished edit, or a
+// wrapper somebody renamed onto the same selector. Reading past the end of the
+// argument list and finding nothing is the case where "no address" and "an
+// address this check approves of" would otherwise be the same answer.
+func TestACallWithNoAddressIsRefused(t *testing.T) {
+	body := `	r, _ := http.Get()
+	_ = r`
+	found := findings(t, source("\t\"net/http\"\n\t\"testing\"\n", body))
+	if len(found) != 1 {
+		t.Fatalf("got %d findings, want 1: %v", len(found), found)
+	}
+	if !strings.Contains(found[0].Detail, "no address to read") {
+		t.Fatalf("the refusal %q does not say there was no address", found[0])
+	}
+}
+
+// An address the check can read but cannot parse is refused, and the refusal
+// carries what the parser said. The alternative is worse than it looks: a URL
+// that fails to parse has no hostname, and a missing hostname is not a
+// loopback one, so treating the failure as an empty host would let a malformed
+// address through the same branch that lets 127.0.0.1 through.
+func TestAnAddressThatIsNotAReadableURLIsRefused(t *testing.T) {
+	body := `	r, _ := http.Get("http://[::1")
+	_ = r`
+	found := findings(t, source("\t\"net/http\"\n\t\"testing\"\n", body))
+	if len(found) != 1 {
+		t.Fatalf("got %d findings, want 1: %v", len(found), found)
+	}
+	if !strings.Contains(found[0].Detail, "not a URL this check can read") {
+		t.Fatalf("the refusal %q does not say the address could not be parsed", found[0])
+	}
+}
+
+// An address with no port is still an address. net.SplitHostPort refuses it,
+// and the whole string is the host in that case, so a host that leaves this
+// machine is still named as one.
+func TestAnAddressWithNoPortIsStillReadAsAHost(t *testing.T) {
+	for name, c := range map[string]struct{ body, names string }{
+		"a host that leaves this machine": {`	conn, _ := net.Dial("unix", "example.com")
+	_ = conn`, "example.com"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			found := findings(t, source("\t\"net\"\n\t\"testing\"\n", c.body))
+			if len(found) != 1 {
+				t.Fatalf("got %d findings, want 1: %v", len(found), found)
+			}
+			if !strings.Contains(found[0].String(), c.names) {
+				t.Fatalf("the refusal %q does not name %q", found[0], c.names)
+			}
+		})
+	}
+}
+
 // A local variable named for a package is not that package. Reading the
 // selector without the import block would refuse this.
 func TestACallOnSomethingElseCalledNetIsNotARefusal(t *testing.T) {
