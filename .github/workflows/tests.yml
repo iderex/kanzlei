@@ -124,7 +124,16 @@ jobs:
           # machine whatever the first hop looks like.
           sudo iptables -I OUTPUT 1 -m owner --uid-owner "$uid" -d 127.0.0.53 -j REJECT
           # The suite reads the checkout and writes its coverage profile into
-          # it, and it is no longer the user that checked it out.
+          # it, and it is no longer the user that checked it out. The checkout
+          # also sits under the job user's home directory, which nobody else may
+          # traverse, so the chain above it is opened for traversal only. The
+          # chain is walked rather than written out, because a path spelled here
+          # is a second place that has to know where a checkout lands.
+          d="$GITHUB_WORKSPACE"
+          while [ "$d" != "/" ]; do
+            sudo chmod o+x "$d"
+            d="$(dirname "$d")"
+          done
           chmod -R a+rwX "$GITHUB_WORKSPACE"
 
       - name: Prove the route is gone before anything is read into the run
