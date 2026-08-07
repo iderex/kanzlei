@@ -33,6 +33,7 @@
 # decisions live under internal/, which is why these lines are short.
 cmd/kanzlei: internal/build internal/server
 cmd/coverfloor: internal/coverfloor
+cmd/treefmt: internal/treefmt
 
 # internal/build imports nothing from this module and never will. It is the one
 # package everything may depend on, and that holds only for as long as it
@@ -56,6 +57,26 @@ internal/server: internal/retrieval
 internal/coverfloor:
 internal/importrules:
 internal/sourcecheck:
+internal/treefmt:
+
+# The permission model, and what these three lines carry is again the absence.
+#
+# internal/authz resolves a permission set, and it imports nothing from this
+# module. A resolver that could reach a store, a source or an identity provider
+# is one that can answer a question by going and asking, and the whole point of
+# the resolution in docs/decisions/0003 is that it is a decision over facts
+# already gathered. Deny wins and unknown means deny only mean anything if
+# nothing can be fetched to turn an unknown into something else.
+#
+# internal/auth turns what a provider said into a principal, and internal/audit
+# declares the record shape. Both reach internal/authz and nothing else. Neither
+# imports the datastore or the retrieval package: a principal that could load
+# its own permissions, or an audit record that could read the index it is
+# recording a decision about, puts a second route to that data beside the one
+# the filter is inside.
+internal/authz:
+internal/auth: internal/authz
+internal/audit: internal/authz
 
 # The suites that are not part of the default run, and the harness they are
 # written against. Nothing that ships may reach a harness that needs a real
