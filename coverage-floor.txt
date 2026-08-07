@@ -15,4 +15,4 @@
 # Lowering it is a change to this file with a commit message saying which
 # package lost its tests and why that was accepted. That is the whole reason the
 # number lives in the tree rather than inside the workflow.
-81.1
+88.6
