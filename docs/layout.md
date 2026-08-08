@@ -76,18 +76,32 @@ from one.
 built from. It imports nothing from this module and never will, so anything may
 import it.
 
-`internal/sourcecheck` is the first exception to the sentence above: it is not
-part of the binary and nothing imports it. It reads this repository's own Go source and
-refuses what no analyser can see, which today is a suppression comment carrying
-no reason. It lives here rather than in a shell block inside a workflow because
-it decides whether the tree is acceptable, and that decision is worth having
-fixtures in front of it.
+Three packages here are the exceptions to the sentence above. None of them is
+part of the binary, nothing in the service imports any of them, and each lives
+here rather than in a shell block inside a workflow because it decides whether
+the tree is acceptable, and that decision is worth having fixtures in front of
+it. They are not enumerated anywhere else; this is the note that says what each
+directory is for, and it is where they belong.
 
-`internal/coverfloor` is the second exception, for the same reason as the first:
-it is not part of the binary and the service imports nothing from it. It reads a
-coverage profile, reports what share of statements the run reached, and decides
-whether that clears the floor the tree holds. `cmd/coverfloor` is the argument
-parsing over it and takes no decision of its own.
+`internal/sourcecheck` reads this repository's own Go source and refuses what no
+analyser can see, which today is a suppression comment carrying no reason.
+
+`internal/coverfloor` reads a coverage profile, reports what share of statements
+the run reached, and decides whether that clears the floor the tree holds.
+`cmd/coverfloor` is the argument parsing over it and takes no decision of its
+own.
+
+`internal/testreach` reads this repository's own test files and refuses a test in
+the default run that dials an address which is not a loopback one, resolves a
+name, or opens a device, and refuses a marked file that is not under `test/`. It
+exists because the condition in #7 cannot be enforced from inside a test
+process, and it is the half of that condition which can be read out of the tree.
+
+`internal/importrules` is the third, and it is the one that reads this note.
+It decides whether the import graph inside this module is the one
+`import-rules.txt` declares, and its own test is what turns the section below
+from prose into a rule. It is not part of the binary and nothing in the binary
+imports it.
 
 `internal/scanfloor` is the third, and the same sentence applies to it. It reads
 the SARIF a code scanning run wrote, resolves the severity of each finding
@@ -106,10 +120,40 @@ whose analyser runs on the hosting service cannot be proved by the suite.
 `internal/server` holds the HTTP surface: the routing table, the listener and
 the shutdown. Handlers live here. What a handler calls does not.
 
+`internal/audit` declares the one record shape every event in this project is
+written as, and refuses a record that could not be queried as intended. It
+writes nothing and stores nothing. [audit.md](audit.md) is generated from that
+declaration rather than written by hand, and the test that generates it also
+compares it, so the two cannot drift.
+
+`internal/auth` turns what an identity provider said about a user into a
+principal that a source system's permissions can be compared against: the
+subject identifier, the groups resolved for the session and how old that
+resolution is, and the per-source identifiers with how each one was
+established. It imports `internal/authz` and nothing else from this module.
+[principal.md](principal.md) is where the mapping rules are argued.
+
+`internal/authz` resolves a permission set against a principal and answers
+whether the document may be shown. It is pure: it reads no source system, holds
+no clock and takes no decision about who the principal is, so the same set and
+the same principal always produce the same answer. It imports nothing from this
+module. [permissions.md](permissions.md) states the rule it holds and names the
+test behind each sentence of it.
+
 ## The import rules
 
-Two of them, and they are the reason this note exists rather than a preference
-about tidiness.
+They are the reason this note exists rather than a preference about tidiness.
+
+`import-rules.txt` at the root of the repository is where they are declared, one
+line per package, and it is the authority for what is permitted. This section is
+the argument for the shape of that file and not a second copy of it: a table
+written twice is a table that disagrees with itself, and the file is the half a
+check reads.
+
+The declaration is a permission list. Each line is the complete set of packages
+inside this module that the package may import, so an edge nobody thought about
+is refused rather than allowed. Most of the rules below are therefore carried by
+what a line does not say.
 
 **The index is reached through the retrieval package and through nothing else.**
 Every read of the index goes through the one package that applies the permission
@@ -123,11 +167,25 @@ question and is given an answer already filtered for the principal that asked.
 A handler holding an index client is one refactor away from a handler that
 queries it directly, and that refactor looks harmless in a diff.
 
-Neither package exists yet. #62 creates them and this note gains their paths on
-the day it does. Until then the rules are written down and there is nothing in
-the tree for them to be about.
+**The model runtime is not reachable from the store package.** Text on its way
+to being embedded passes through the packages that ask for an embedding. A store
+that could call a runtime itself is a store that can send a document somewhere
+on its own, which is the one thing an operator running this on their own
+infrastructure is promised does not happen without their say.
 
-Two rules that do apply today, because the packages exist:
+**A fake is reachable from a test file and from nothing that ships.** A fake
+source and a fake runtime exist so that the contract suites can run under the
+conditions in #7. A shipped file that reached one would be a binary answering
+from a fixture corpus, and the answer would look exactly like a real one.
+
+None of the packages those four rules are about is in the tree yet. They are
+declared in `import-rules.txt` as planned, each carrying the issue that creates
+it, so the rule is written before the package rather than after the first
+violation. The day such a package lands, its marker is stale and the check says
+so rather than passing over it, which is what stops a planned line from becoming
+a place to keep a package nobody declared.
+
+Two rules that apply to what is there today:
 
 `internal/build` imports nothing from this module. It is the one package
 everything may depend on, and that holds only while it depends on nothing.
@@ -138,9 +196,32 @@ dependency of the thing the binary is built from.
 
 ## What enforces them
 
-Nothing. No test in this tree reads an import graph, so every rule above is
-prose that a reviewer either notices or does not.
+`internal/importrules` reads `import-rules.txt` and the import graph of this
+module, and its case over this tree fails on a disagreement between them. The
+failure names the package, the import that was refused and the chain a binary
+reaches that package by, because a forbidden import usually arrives through a
+package that looked like a helper and the reader's question is which one.
 
-#111 is the issue that turns them into tests. Until it lands, a change that
-imports the index from a handler will build, pass and merge, and the only thing
-standing in front of it is somebody reading the diff.
+    go test ./internal/importrules -count=1
+
+It runs in the default suite rather than behind a tag or on a schedule. A
+forbidden import is cheapest to remove in the minute it is written.
+
+The file fails closed in both directions. A package in the tree with no line is
+refused, so the declaration cannot quietly fall behind the tree. A line naming a
+package that is not in the tree is refused as a typo unless it is marked
+planned, and a planned marker for a package that has since arrived is refused as
+stale.
+
+What it does not reach is worth knowing before it is trusted. It reads import
+declarations out of source, so it sees what a file says and not what a program
+does: a package reached through reflection, a linker flag or a plugin is
+invisible to it, and so is a directory the walk skips, which is `testdata` and
+anything whose name starts with a dot or an underscore. It reads this module
+only. It has no opinion about whether a permitted edge is a good idea, which
+stays a question for review.
+
+The tree matching the file is a fact about the tree on the day the case ran, and
+it is not evidence that the rules bite. What proves that is the fixtures beside
+the case, each of which puts one violation in front of the same functions and
+requires the refusal.
