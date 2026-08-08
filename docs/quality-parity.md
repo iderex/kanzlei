@@ -255,10 +255,14 @@ that takes too long gets worked around. The answer is to keep it in the required
 set and treat its runtime as a defect in the suite when it becomes one, rather
 than to move it out of the set the day it gets slow.
 
-`#114`, the headless conformance job, is in the required set. Its red result
-means a test acquired a dependency on a display, on privileges, on an
-accelerator or on the network, and that is always the change's fault and never
-the world's. It is also cheap.
+`#114`, the headless conformance, is in the required set, and it is not a job
+of its own. It is published under `Tests`, because the condition binds the run
+rather than the job: the route out is taken away from the user the suite runs
+as, and a second job would have to run the suite a second time to be about
+anything. A protection rule naming this holds `Tests`, and there is no second
+string to name. Its red result means a test acquired a dependency on a display,
+on privileges, on an accelerator or on the network, and that is always the
+change's fault and never the world's. It is also cheap.
 
 The default suite from #6 and code scanning from #106 join the set when they
 exist, on the same test.
