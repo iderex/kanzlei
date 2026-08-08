@@ -76,7 +76,8 @@ from one.
 built from. It imports nothing from this module and never will, so anything may
 import it.
 
-Three packages here are the exceptions to the sentence above. None of them is
+The packages that check this tree are the exceptions to the sentence above, and
+they are the ones named below rather than a count stated here. None of them is
 part of the binary, nothing in the service imports any of them, and each lives
 here rather than in a shell block inside a workflow because it decides whether
 the tree is acceptable, and that decision is worth having fixtures in front of
@@ -97,13 +98,13 @@ name, or opens a device, and refuses a marked file that is not under `test/`. It
 exists because the condition in #7 cannot be enforced from inside a test
 process, and it is the half of that condition which can be read out of the tree.
 
-`internal/importrules` is the third, and it is the one that reads this note.
+`internal/importrules` is the one that reads this note.
 It decides whether the import graph inside this module is the one
 `import-rules.txt` declares, and its own test is what turns the section below
 from prose into a rule. It is not part of the binary and nothing in the binary
 imports it.
 
-`internal/scanfloor` is the third, and the same sentence applies to it. It reads
+`internal/scanfloor` is another of them, and the same sentence applies. It reads
 the SARIF a code scanning run wrote, resolves the severity of each finding
 against the rules the document declares, and decides which of them refuse the
 run. The direction it decides in is the part worth the fixtures: a finding whose
