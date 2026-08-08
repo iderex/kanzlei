@@ -74,8 +74,18 @@ and what ran on your pull request is printed by
 ### Reproducing a check locally
 
 Each published check is defined by exactly one file under
-`.github/workflows/`, and the command above maps the check name to that file.
-The file is the authority for what the check runs, not this document.
+`.github/workflows/`. The first command above does not print the check's name.
+It prints the workflow's own name, and the name published as a check is the
+`name:` of the job inside that file, or the job's identifier where the job
+declares none. Those are different words here, so that command maps a check to
+its file only once the file has been read. What the tree declares is printed:
+
+    git grep -n '^    name:' -- .github/workflows/
+
+The file is the authority for what the check runs, not this document. Where a
+section below gives the command for a check, it names the check that command
+reproduces, because the published name is what a protection rule would hold the
+branch by and a command with no name beside it cannot be matched to one.
 
 A step written as a `run:` block is a shell command you can run yourself against
 a checkout, and running it is the exact reproduction. A step written as `uses:`
@@ -89,12 +99,13 @@ question.
 
 ### The analysers
 
-The static analysis check runs four things, and each is named here with the
-command that reproduces it exactly as the check runs it. This is the one place
-this document names what a check does rather than pointing at the file, because
-an analyser you cannot run locally is one you meet for the first time on a red
-gate. `.github/workflows/analysis.yml` is still the authority, and if these
-commands and that file disagree, the file is right.
+The check is published as `Static analysis`. It runs four things, and each is
+named here with the command that reproduces it exactly as the check runs it.
+This is the one place this document names what a check does rather than
+pointing at the file, because an analyser you cannot run locally is one you
+meet for the first time on a red gate. `.github/workflows/analysis.yml` is
+still the authority, and if these commands and that file disagree, the file is
+right.
 
 Install the two that are not in the Go distribution, at the versions the
 workflow pins:
@@ -197,7 +208,8 @@ fresh checkout of that file.
 
 ## The default suite
 
-One command, and it is the command the check runs:
+The check is published as `Tests`. One command, and it is the command that
+check runs, character for character:
 
     go test -race -covermode=atomic -coverprofile=coverage.out ./...
 
@@ -289,10 +301,10 @@ that turned one away.
 
 ## Sign your work
 
-Every commit carries a `Signed-off-by` trailer naming its author, and the DCO
-check refuses a pull request where one does not. What that trailer certifies is
-in [DCO](DCO), which is the Developer Certificate of Origin 1.1 verbatim. Read
-it once before you sign.
+Every commit carries a `Signed-off-by` trailer naming its author, and the check
+published as `DCO sign-off` refuses a pull request where one does not. What
+that trailer certifies is in [DCO](DCO), which is the Developer Certificate of
+Origin 1.1 verbatim. Read it once before you sign.
 
 `git commit -s` adds the trailer from your configured name and address:
 
@@ -343,11 +355,12 @@ decodes as UTF-8. Without that file the treatment comes from each clone's
 `core.autocrlf`, which is a local setting no tree holds and no reviewer can see,
 so two contributors store different bytes for the same edit.
 
-A published check reads the index rather than the working tree and refuses a
-text blob stored with CR bytes, a tracked path no attribute line covers, and a
-text blob that is not valid UTF-8. It reads the index because a checkout applies
-the conversion whose absence is the thing being looked for. If it refuses a file
-you did not think you changed, your clone predates the attributes file:
+The check published as `Reject nondeterministic text` reads the index rather
+than the working tree, and refuses a text blob stored with CR bytes, a tracked
+path no attribute line covers, and a text blob that is not valid UTF-8. It
+reads the index because a checkout applies the conversion whose absence is the
+thing being looked for. If it refuses a file you did not think you changed,
+your clone predates the attributes file:
 
     git add --renormalize .
 
