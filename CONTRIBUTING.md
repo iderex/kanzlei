@@ -208,8 +208,11 @@ fresh checkout of that file.
 
 ### Documentation references
 
-The check is published as `Documentation`. One command, and it is the command
-that check runs, character for character:
+The check is published as `Documentation` and it holds two rules. This section
+is the first of them. Both are named here with the command that reproduces
+each, character for character as the check runs it, and they sit under one
+published name because a name is what a protection rule holds the branch by
+and one gate either passes or does not.
 
     go run ./cmd/doclint
 
@@ -246,8 +249,53 @@ reported by the import rules rather than having to be noticed here.
 
 It is a floor under the documents rather than a proof about them. `#113` is
 where the rest of the documentation gate is argued, and the parts not built are
-named there: a markdown rule set, external links, the syntax of commands inside
-code blocks, and running the examples rather than reading them.
+named there: external links, the syntax of commands inside code blocks, and
+running the examples rather than reading them.
+
+### The document shape
+
+The second rule under the same check. One command:
+
+    go run ./cmd/mdlint
+
+It refuses a document written outside the shape the rest of the tree assumes.
+Seven rules, each of which either has bitten something here or is what another
+reader of these documents depends on:
+
+A fenced block is written with backticks, and one that is never closed is
+refused. Both matter more than they look, because the path check above decides
+which lines are prose by tracking fences and treats a backtick run and a tilde
+run as the same thing. A document that opens with one and closes with the
+other, or that never closes, moves that boundary for every line after it, and
+the path check then reads the wrong half of the document without saying so. A
+gate that goes quiet is worse than one that goes red.
+
+Every heading is written with hashes rather than as an underline, without a
+trailing hash run, and no more than one level below the heading above it. The
+first heading in a document sets the baseline rather than having to be a level
+one, because `.github/pull_request_template.md` has no title of its own and
+opens at a level two deliberately.
+
+A heading has a blank line before and after it. Without the one before, a
+heading glued to the paragraph above is not a heading at all in a strict
+reader.
+
+An unordered list item is written with a hyphen.
+
+What it does not read is the same boundary the path check draws. A fenced block
+and an indented block are passed over, because a document showing markdown is
+showing it rather than writing it. A hash run that is not followed by a space
+is not a heading, which is not pedantry here: this repository's documents open
+sentences with an issue reference, and `#52 has to propagate a revocation` is
+prose to every renderer and would be a finding under a looser rule.
+
+There is no writing mode. A heading level skip has more than one legal repair,
+and a tool that picked one would be editing the structure of a document rather
+than its bytes.
+
+It is a floor from here rather than a repair: every document in the tree
+already held all seven when it landed, so what the rules are proven by is
+`internal/mdlint`'s own fixtures rather than by anything they found.
 
 ## The default suite
 
