@@ -34,6 +34,7 @@
 cmd/kanzlei: internal/build internal/server
 cmd/coverfloor: internal/coverfloor
 cmd/doclint: internal/doclint internal/importrules
+cmd/mdlint: internal/mdlint
 cmd/prhygiene: internal/prhygiene
 cmd/scanfloor: internal/scanfloor
 cmd/treefmt: internal/treefmt
@@ -60,6 +61,7 @@ internal/server: internal/retrieval
 internal/coverfloor:
 internal/doclint:
 internal/importrules:
+internal/mdlint:
 internal/prhygiene:
 internal/scanfloor:
 internal/sourcecheck:

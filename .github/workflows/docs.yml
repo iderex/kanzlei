@@ -20,6 +20,19 @@
 # target, and passes over command blocks, so it is a floor under the documents
 # rather than a proof about them. #113 is where the rest of the documentation
 # gate is argued.
+#
+# The second rule here is the shape a document is written in, in
+# internal/mdlint. It is a separate rule from the one above because the two
+# fail differently: a dead path is wrong on the day it is written, and a shape
+# departure is wrong on the day another reader meets it. Three of its rules
+# exist because the path check above is one of those readers, and an unclosed
+# or mismatched fence moves the boundary it uses to tell prose from a command
+# block, which turns it quiet rather than red.
+#
+# Both run under one published name. The name is what a protection rule holds
+# the branch by, so a second check name here would be a second entry the
+# required set has to be told about, for one gate that either passes or does
+# not.
 name: docs
 
 on:
@@ -69,11 +82,17 @@ jobs:
           # reason the contributor cannot see.
           go run ./cmd/doclint
 
-      - name: The rule is read by its own fixtures, not only by the tree
+      - name: The shape this repository's documents are written in
         run: |
           set -euo pipefail
-          # The step above is green whenever the documents happen to be
+          # The same command CONTRIBUTING.md names, character for character.
+          go run ./cmd/mdlint
+
+      - name: The rules are read by their own fixtures, not only by the tree
+        run: |
+          set -euo pipefail
+          # The steps above are green whenever the documents happen to be
           # correct, which proves the state of the tree and not the guard.
-          # These are the cases that prove the guard, including the one
+          # These are the cases that prove the guards, including the one
           # character that is the mistake somebody actually makes.
-          go test ./internal/doclint ./cmd/doclint -count=1
+          go test ./internal/doclint ./cmd/doclint ./internal/mdlint ./cmd/mdlint -count=1
