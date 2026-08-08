@@ -245,6 +245,22 @@ shell, and workflow files are the one place a change can grant itself rights.
 `dependency-review`. Without it a dependency carrying a known advisory lands and
 nothing says so until somebody looks.
 
+`Tests`. Without it a change lands that does not compile or does not pass, which
+in a language where compilation is part of the test command is the whole of what
+a build check is for. It carries a second thing under the same name: the suite
+runs with its route out removed, so a red result also means a test acquired a
+dependency on the network, and that is always the change's fault and never the
+world's. There is no second job and no second string a protection rule could
+name, because the condition binds the run rather than the job and a second job
+would have to run the whole suite again to be about anything. What the condition
+still does not reach is in #114, which stays open on it.
+
+`Code scanning`. Without it a defect class the compiler does not see lands and
+nothing reads the tree for it. It also carries the one proof route in this
+repository for a gate whose analyser runs on the hosting service rather than in
+the suite, which is the manual input in `.github/workflows/codeql.yml` that
+compiles `internal/scanfixture` into the analysis and is expected to be refused.
+
 ### Proposed as they land
 
 `#25`, the authorisation conformance suite, is in the required set. It is the
@@ -254,18 +270,6 @@ runtime: a suite over every user and every query grows, and a required check
 that takes too long gets worked around. The answer is to keep it in the required
 set and treat its runtime as a defect in the suite when it becomes one, rather
 than to move it out of the set the day it gets slow.
-
-`#114`, the headless conformance, is in the required set, and it is not a job
-of its own. It is published under `Tests`, because the condition binds the run
-rather than the job: the route out is taken away from the user the suite runs
-as, and a second job would have to run the suite a second time to be about
-anything. A protection rule naming this holds `Tests`, and there is no second
-string to name. Its red result means a test acquired a dependency on a display,
-on privileges, on an accelerator or on the network, and that is always the
-change's fault and never the world's. It is also cheap.
-
-The default suite from #6 and code scanning from #106 join the set when they
-exist, on the same test.
 
 ### Proposed to stay advisory
 
