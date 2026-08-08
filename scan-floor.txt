@@ -1,0 +1,31 @@
+# The security severity at or above which a code scanning finding refuses the
+# run.
+#
+# It is one number and it is a decision rather than the tool's behaviour. The
+# analyser's own default is to refuse nothing: findings become alerts in a
+# dashboard and the run stays green, so a tree can carry a critical finding
+# through every check it has. What reads this number is
+#
+#     go run ./cmd/scanfloor -sarif <the analysis output> -floor scan-floor.txt
+#
+# and the direction it reads it in is in internal/scanfloor: a finding at or
+# above this number refuses the run, and so does a finding whose severity
+# cannot be determined at all.
+#
+# Zero, meaning every security finding refuses the run.
+#
+# The reason is the backlog. A threshold that admits some findings is a decision
+# to carry known defects, and it is worth taking only against a backlog large
+# enough that refusing all of them would stop the work. The issue that asked for
+# this gate asked for it early so that the backlog would be small, and the count
+# this tree actually carries is printed by the run rather than written here.
+#
+# It is also the only setting that does not need re-arguing every time the
+# analyser's severity scores move. A finding scored 6.9 today and 7.1 next
+# quarter changes what a floor of 7.0 does and changes nothing here.
+#
+# Raising it is a change to this file with a commit message naming the finding
+# being accepted and why. That is the whole reason the number lives in the tree
+# rather than inside the workflow, and it is the same argument
+# coverage-floor.txt makes for its own.
+0.0

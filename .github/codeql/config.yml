@@ -1,0 +1,40 @@
+# What the code scanning gate asks of this tree.
+#
+# The query set is here rather than left to the analyser's default, because a
+# default is a decision somebody else takes and changes without a commit in this
+# repository. #106 is where this was argued.
+
+name: kanzlei
+
+# security-extended rather than the default suite. The default suite is tuned
+# for a low false positive rate across every project on the service; this one
+# adds the queries whose precision is a little lower and whose subject is
+# exactly what this project is: untrusted input reaching a path, a query, a
+# command or a template. The cost of the extra queries is triage time, and the
+# tree is small enough today that the cost is affordable and the backlog it
+# produces is short. That trade is the reason #106 asked for this gate early.
+#
+# security-and-quality is deliberately not used. It adds maintainability queries
+# whose findings are opinions rather than defects, and a gate that refuses on an
+# opinion is a gate somebody turns off.
+queries:
+  - uses: security-extended
+
+# No query from the chosen set is excluded.
+#
+# This block exists so that an exclusion has a place to go with its reason
+# beside it, on the line where it is written, rather than being made invisibly
+# by dismissing alerts in a dashboard. An exclusion here is a diff with a commit
+# message; a dismissal in the dashboard is not.
+#
+# query-filters:
+#   - exclude:
+#       id: go/some-query        # one line saying why this project does not want it
+query-filters: []
+
+# No path is excluded either, and internal/scanfixture in particular is not.
+#
+# That directory holds the deliberately defective file the gate is proved with,
+# and excluding it here would mean the proof could never be run. It is kept out
+# of every build by a build constraint instead, so the analyser sees it only
+# when a run deliberately asks for it. internal/scanfixture/doc.go says how.
