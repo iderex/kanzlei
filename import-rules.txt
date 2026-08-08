@@ -34,6 +34,7 @@
 cmd/kanzlei: internal/build internal/server
 cmd/coverfloor: internal/coverfloor
 cmd/prhygiene: internal/prhygiene
+cmd/scanfloor: internal/scanfloor
 cmd/treefmt: internal/treefmt
 
 # internal/build imports nothing from this module and never will. It is the one
@@ -58,6 +59,7 @@ internal/server: internal/retrieval
 internal/coverfloor:
 internal/importrules:
 internal/prhygiene:
+internal/scanfloor:
 internal/sourcecheck:
 internal/testreach:
 internal/treefmt:
@@ -88,6 +90,15 @@ internal/audit: internal/authz
 # binary that refuses to start without one.
 test-only test/needs-real-hardware-or-services #8
 test/needs-real-hardware-or-services:
+
+# The one deliberately defective file, held out of every build by a constraint
+# and existing only so the code scanning gate can be made to go red on demand.
+# Its line is empty and it is marked test-only, which together say the two
+# things that matter: it reaches nothing, and nothing that ships may reach it.
+# A path traversal written on purpose, imported from a file that ships, is no
+# longer a fixture.
+test-only internal/scanfixture #106
+internal/scanfixture:
 
 # Planned, with the issue that creates each one. The paths are what those
 # issues are expected to write and are not settled by this file; whoever lands
