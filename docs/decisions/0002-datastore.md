@@ -107,9 +107,30 @@ comes from and does not claim it is present.
 
 ## What this record does not deliver
 
-The suite does not yet run against a real datastore in a throwaway instance.
-There is no suite, because there is no module (#2), and there is no throwaway
-instance mechanism, because the condition in #7 has not been established. Both
-are prerequisites of that step rather than parts of this decision, and the step
-is unmet at the time of writing. It is not partially met and it is not met in
-a different form.
+The suite does not run against a real datastore in a throwaway instance. That
+step is unmet. It is not partially met and it is not met in a different form.
+
+What stands in the way is no longer what this paragraph first said. The module
+and the default suite exist, so the prerequisite that was named here has been
+met and is no longer a reason:
+
+    go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+Three things stand in the way now, and none of them is settled by this decision.
+
+There is no datastore package. `import-rules.txt` carries it as a declared debt
+rather than as an absence somebody has to notice, with the issue that creates
+it:
+
+    git grep -n 'planned internal/store' -- import-rules.txt
+
+There is no client for the datastore, and taking one is this module's first
+dependency. Everything here is standard library today, so there is no `go.sum`
+and the default suite runs with the module proxy switched off. What a first
+dependency costs is the supply-chain question in #112 rather than a line in
+this record.
+
+And there is no throwaway instance. Bringing a real PostgreSQL up and taking it
+down with no manual step, at the version and with the extension named above,
+reachable over loopback so that the conditions in #7 still hold, is a mechanism
+this repository does not have.

@@ -85,7 +85,7 @@ func TestServeThenShutdownIsNotAnError(t *testing.T) {
 	served := make(chan error, 1)
 	go func() { served <- srv.Serve() }()
 
-	resp, err := http.Get("http://" + srv.Addr() + server.LivenessPath)
+	resp, err := http.Get("http://" + srv.Addr() + server.LivenessPath) // loopback: the address is the one this case bound a line above, on 127.0.0.1
 	if err != nil {
 		t.Fatalf("get liveness: %v", err)
 	}
