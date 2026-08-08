@@ -160,6 +160,43 @@ jobs:
           # it, and cmd/kanzlei starts the binary and asks it whether it is
           # alive. A rule that had taken loopback with it would redden both.
 
+      - name: What the default run leaves out, with a count
+        env:
+          GOPROXY: "off"
+          GOFLAGS: "-mod=mod"
+        run: |
+          set -euo pipefail
+          # The set the default run excludes, printed here so that it growing is
+          # visible in the run rather than only to somebody who thinks to ask.
+          # A suite that quietly moves a case out of the default run and into
+          # the marked set has weakened the gate by exactly that case, and until
+          # this step the run said nothing about it either way.
+          #
+          # The command is the one CONTRIBUTING.md names, character for
+          # character. The count is taken out of that same output rather than
+          # from a second walk of the tree, because a count and a listing that
+          # come from two places disagree the first time one of them is wrong.
+          #
+          # It runs as the job rather than as the user the suite runs as, and
+          # before the suite rather than after it. The listing compiles the
+          # marked set under its tag, which is a compilation the default run
+          # deliberately does not do, and reading what was left out before
+          # reading what was included is the order a person wants it in.
+          if ! listing=$(go test -tags needsreal -list '.*' ./test/... 2>&1); then
+            printf '%s\n' "$listing"
+            echo "::error::the marked set could not be listed, so this run has no count of what it excluded; a listing that failed is not a count of zero"
+            exit 1
+          fi
+          printf '%s\n' "$listing"
+          # grep exits 1 on no match, which is a legitimate answer here: a tree
+          # with nothing marked excludes nothing. || true keeps that from
+          # ending the step under set -e, and the failure case above is what
+          # separates it from a listing that never ran.
+          count=$(printf '%s\n' "$listing" | grep -c '^Test' || true)
+          # "all under test/" is not a hope: internal/testreach refuses a marked
+          # file anywhere else, and that refusal runs in the suite below.
+          echo "excluded from the default run: ${count} test(s), all under test/"
+
       - name: The default suite, with the race detector, producing coverage
         env:
           # An accidental module fetch fails here rather than hanging against a
