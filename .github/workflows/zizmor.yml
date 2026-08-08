@@ -18,6 +18,15 @@
 # gate before merge. Keep actions SHA-pinned, keep checkout on
 # persist-credentials:false, and grant write permissions per job rather than at
 # workflow level.
+#
+# The sentence above about unpinned-uses is a claim about the analyser rather
+# than about this tree, and a gate that has never refused anything is a gate
+# nobody has proved. The manual route below is how it is proved: it puts one
+# tag reference into the checkout and the audit is expected to refuse the run.
+# It is a dispatch rather than a branch because the triggers here are a push to
+# the default branch and a pull request, so a branch does not run this gate and
+# proving it that way would mean opening a pull request carrying a deliberate
+# defect for somebody to clean up afterwards.
 name: Workflow Security Analysis
 
 on:
@@ -25,6 +34,12 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ "**" ]
+  workflow_dispatch:
+    inputs:
+      unpin_one_action:
+        description: "Replace one action's commit pin with the tag its own comment names. The run is expected to be refused."
+        type: boolean
+        default: false
 
 # Explicit deny-all at workflow level; the job below grants only what it needs.
 permissions: {}
@@ -55,6 +70,26 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
 
+      - name: Unpin one action
+        # The defect this gate's pinning rule is against, and the mistake
+        # somebody actually makes: a commit pin replaced by the version its own
+        # trailing comment names, which reads as a tidy-up and turns a fixed
+        # reference into a moving one. It exists only inside a run started by
+        # hand with the input set, so nothing in the tree carries it and no
+        # ordinary run sees it. The counts either side of the edit are what
+        # keeps the proof honest: if the pin this step rewrites ever moves, the
+        # substitution matches nothing, the audit passes, and a run that proved
+        # nothing reads exactly like a gate that let a tag through.
+        if: ${{ inputs.unpin_one_action }}
+        run: |
+          set -euo pipefail
+          file=.github/workflows/dco.yml
+          test "$(grep -cE 'uses: [^@]+@[0-9a-f]{40} # v' "$file")" -ge 1
+          test "$(grep -cE 'uses: [^@]+@v[0-9]' "$file")" -eq 0
+          sed -i -E '0,/uses: ([^@]+)@[0-9a-f]{40} # (v[0-9][^ ]*)/s//uses: \1@\2/' "$file"
+          test "$(grep -cE 'uses: [^@]+@v[0-9]' "$file")" -eq 1
+          grep -nE 'uses: [^@]+@v[0-9]' "$file"
+
       - name: Audit workflows (SARIF for code scanning)
         # --no-build: install zizmor from its prebuilt wheel only, never executing a
         # source-dist build script. --strict-collection: fail closed if any workflow
@@ -71,6 +106,12 @@ jobs:
         # runs and blocks on findings. continue-on-error keeps the security gate
         # independent of the upload: a transient code-scanning upload failure must not
         # skip the "Fail on actionable findings" step below.
+        #
+        # A run started by hand matches neither arm, so the proof route does not
+        # upload. That is the behaviour wanted rather than an accident of the
+        # condition: its finding is about a line that exists for the length of
+        # one run, and putting it in the dashboard would leave somebody to work
+        # out later why an alert names a pin their checkout does not have.
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
