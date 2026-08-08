@@ -33,6 +33,7 @@
 # decisions live under internal/, which is why these lines are short.
 cmd/kanzlei: internal/build internal/server
 cmd/coverfloor: internal/coverfloor
+cmd/doclint: internal/doclint internal/importrules
 cmd/prhygiene: internal/prhygiene
 cmd/scanfloor: internal/scanfloor
 cmd/treefmt: internal/treefmt
@@ -57,6 +58,7 @@ internal/server: internal/retrieval
 # binary, nothing in the binary imports them, and each is a package rather than
 # a shell block for the reason docs/decisions/0001-means.md gives.
 internal/coverfloor:
+internal/doclint:
 internal/importrules:
 internal/prhygiene:
 internal/scanfloor:

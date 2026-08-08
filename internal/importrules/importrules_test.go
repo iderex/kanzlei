@@ -348,3 +348,27 @@ func TestDeclaredReportsTheFileOrderAndACopy(t *testing.T) {
 		t.Fatalf("the caller edited the rules through the list it was handed: %v", again)
 	}
 }
+
+func TestPlannedReportsOnlyTheMarkedPackages(t *testing.T) {
+	rules := parse(t, "internal/build:\nplanned internal/store #9\ninternal/store:\nplanned internal/runtime #71\ninternal/runtime:\n")
+
+	planned := rules.Planned()
+	if len(planned) != 2 || planned[0] != "internal/store" || planned[1] != "internal/runtime" {
+		t.Fatalf("want the two marked packages in the file's own order, got %v", planned)
+	}
+
+	planned[0] = "edited"
+	if again := rules.Planned(); again[0] != "internal/store" {
+		t.Fatalf("the caller edited the rules through the list it was handed: %v", again)
+	}
+}
+
+func TestPlannedIsEmptyWhereNothingIsMarked(t *testing.T) {
+	// internal/doclint reads this to decide which paths a document may name
+	// before they exist. A register with no marker has to answer none rather
+	// than answer everything, because the second reading would let a document
+	// name anything under a directory the tree already has.
+	if planned := parse(t, "internal/build:\n").Planned(); len(planned) != 0 {
+		t.Fatalf("want no planned package, got %v", planned)
+	}
+}

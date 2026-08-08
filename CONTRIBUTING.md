@@ -206,6 +206,49 @@ If it reports a carriage return in a file you did not touch, your working copy
 predates `.gitattributes`. `go run ./cmd/treefmt -write` fixes it, and so does a
 fresh checkout of that file.
 
+### Documentation references
+
+The check is published as `Documentation`. One command, and it is the command
+that check runs, character for character:
+
+    go run ./cmd/doclint
+
+It refuses a document that names a path this repository does not have. That is
+the way a load-bearing document fails here: a file moves, the sentence pointing
+at it still reads correctly, and the next person follows it to a path that is
+not there. The formatting gate judges bytes and the analysers judge Go, so
+without this nothing reads a sentence.
+
+There is no writing mode. Where a document names a path that is not there,
+either the document is wrong or the path is missing, and no tool can tell
+which.
+
+What counts as naming a path is narrow on purpose, and the narrowness is the
+reason the findings are worth fixing rather than arguing with. Two positions
+are read. An inline code span, resolved from the repository root, which is how
+this document writes `internal/authz` in a sentence. And a link target,
+`[text](target)`, resolved against the directory the document sits in, which is
+what a markdown reader does with it.
+
+Three things are deliberately not read. A fenced block and an indented block,
+because they hold commands, and a command line carries outputs and arguments
+rather than paths in this tree: `coverage.out` is written by a command above
+and is deliberately untracked, so a check that read command blocks would refuse
+this document for being correct. And a span whose first segment is not a
+directory this repository already has, which is what keeps `go/format` and
+`application/json` out of the findings and also means `go.mod` and `DCO` are
+not checked at all.
+
+A path a document may name before it exists is read from `import-rules.txt`,
+which already declares each planned package with the issue that creates it.
+There is no second list, so the day a planned package lands the stale marker is
+reported by the import rules rather than having to be noticed here.
+
+It is a floor under the documents rather than a proof about them. `#113` is
+where the rest of the documentation gate is argued, and the parts not built are
+named there: a markdown rule set, external links, the syntax of commands inside
+code blocks, and running the examples rather than reading them.
+
 ## The default suite
 
 The check is published as `Tests`. One command, and it is the command that
