@@ -1,0 +1,79 @@
+# Documentation references: every path a document names has to be there.
+#
+# Several issues in this plan have a sentence in a document as their
+# done-condition, which makes a document load bearing. The way a load-bearing
+# document fails is not that it becomes unreadable. It is that a file moves,
+# the sentence pointing at it still reads correctly, and the next person
+# follows it to a path that is not there. Nothing else in this tree catches
+# that: the formatting gate judges bytes, the analysers judge Go, and neither
+# reads a sentence.
+#
+# The decision is a program in this repository rather than a shell block, for
+# the reason docs/decisions/0001-means.md gives. It parses markdown, resolves a
+# path against a tree and a register of what is planned, and decides whether to
+# refuse. internal/doclint holds the fixtures, including the near miss this is
+# actually for: a record renamed in the tree and not in the sentence that
+# points at it, one character apart.
+#
+# What it does not do is written where the rule is, in internal/doclint. The
+# short version is that it reads two positions, an inline code span and a link
+# target, and passes over command blocks, so it is a floor under the documents
+# rather than a proof about them. #113 is where the rest of the documentation
+# gate is argued.
+name: docs
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Read-only. The check reports; there is no repair to write, because where a
+# document names a path that is not there either the document is wrong or the
+# path is missing and no tool can tell which.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    # The name published as the check. It is an interface: a protection rule
+    # names a check as a string, so renaming this silently stops it being
+    # required. #6 is where the published names are settled.
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes, so do not persist the GITHUB_TOKEN in .git/config.
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # go.mod is the authority for the version. Naming one here would give
+          # this repository two, and the second would drift.
+          go-version-file: go.mod
+          check-latest: false
+
+      - name: Every path this repository's documents name
+        run: |
+          set -euo pipefail
+          # The same command CONTRIBUTING.md names, character for character. A
+          # check reproduced by a different command is a different check, and
+          # the one nobody runs locally is the one that goes red here for a
+          # reason the contributor cannot see.
+          go run ./cmd/doclint
+
+      - name: The rule is read by its own fixtures, not only by the tree
+        run: |
+          set -euo pipefail
+          # The step above is green whenever the documents happen to be
+          # correct, which proves the state of the tree and not the guard.
+          # These are the cases that prove the guard, including the one
+          # character that is the mistake somebody actually makes.
+          go test ./internal/doclint ./cmd/doclint -count=1

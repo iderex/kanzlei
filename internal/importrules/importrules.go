@@ -203,6 +203,25 @@ func (r *Rules) resolve(name string) error {
 // Declared reports the packages the file holds, in the order it holds them.
 func (r *Rules) Declared() []string { return append([]string(nil), r.order...) }
 
+// Planned reports the packages the file declares as not in the tree yet, in
+// the order it declares them.
+//
+// It is exported for one reader outside this package. internal/doclint refuses
+// a document that names a path the tree does not have, and a document is
+// allowed to name a package an issue is going to write. Deriving that set from
+// this file rather than from a second list keeps one register of what is owed,
+// and the day the package lands the stale marker is reported here rather than
+// having to be noticed there.
+func (r *Rules) Planned() []string {
+	planned := make([]string, 0, len(r.planned))
+	for _, pkg := range r.order {
+		if _, ok := r.planned[pkg]; ok {
+			planned = append(planned, pkg)
+		}
+	}
+	return planned
+}
+
 // A Finding is one thing the tree and the declaration disagree about.
 type Finding struct {
 	Kind    string   // what shape of disagreement this is
