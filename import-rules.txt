@@ -32,6 +32,7 @@
 # The binaries. Argument parsing and process lifetime live here and the
 # decisions live under internal/, which is why these lines are short.
 cmd/kanzlei: internal/build internal/server
+cmd/cmdlint: internal/cmdlint
 cmd/coverfloor: internal/coverfloor
 cmd/doclint: internal/doclint internal/importrules
 cmd/linkcheck: internal/linkcheck
@@ -59,6 +60,7 @@ internal/server: internal/retrieval
 # The checks this repository runs against itself. None of them is part of the
 # binary, nothing in the binary imports them, and each is a package rather than
 # a shell block for the reason docs/decisions/0001-means.md gives.
+internal/cmdlint:
 internal/coverfloor:
 internal/doclint:
 internal/importrules:
