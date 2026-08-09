@@ -208,11 +208,11 @@ fresh checkout of that file.
 
 ### Documentation references
 
-The check is published as `Documentation` and it holds two rules. This section
-is the first of them. Both are named here with the command that reproduces
-each, character for character as the check runs it, and they sit under one
-published name because a name is what a protection rule holds the branch by
-and one gate either passes or does not.
+The check is published as `Documentation` and it holds three rules. This
+section is the first of them. All three are named here with the command that
+reproduces each, character for character as the check runs it, and they sit
+under one published name because a name is what a protection rule holds the
+branch by and one gate either passes or does not.
 
     go run ./cmd/doclint
 
@@ -249,8 +249,9 @@ reported by the import rules rather than having to be noticed here.
 
 It is a floor under the documents rather than a proof about them. `#113` is
 where the rest of the documentation gate is argued, and the parts not built are
-named there: external links, the syntax of commands inside code blocks, and
-running the examples rather than reading them.
+named there: the syntax of commands inside code blocks, and running the
+examples rather than reading them. A link pointing off this machine is the
+third rule below rather than one of the parts not built.
 
 ### The document shape
 
@@ -296,6 +297,56 @@ than its bytes.
 It is a floor from here rather than a repair: every document in the tree
 already held all seven when it landed, so what the rules are proven by is
 `internal/mdlint`'s own fixtures rather than by anything they found.
+
+### Links off this machine
+
+The third rule under the same check, and the only step in it that leaves the
+runner. One command:
+
+    go run ./cmd/linkcheck
+
+The path check above resolves a link target that points inside this repository.
+This one asks the other end about a target that does not. The two fail
+differently: a path moves because somebody here moved it, and an address dies
+because somebody with no relationship to this repository deleted it, which
+nothing here would otherwise notice.
+
+Only two answers are refused, and both are the other end saying the address is
+not there. A status of 404 or 410, and a host that does not resolve. Everything
+else that failed is treated as saying nothing about the address: a timeout, a
+reset, a 429 and any 5xx are asked again, up to three times with a pause
+between, and a link that still could not be judged is printed and does not
+redden the check. A gate that goes red because a host was slow is one people
+re-run until it is green, which is the same as having no gate.
+
+A status this does not name is read as the address being there, which is
+deliberate and is the direction to be wrong in. A 401 or a 403 is a document
+behind a credential and a 405 is a server declining the method, and in all
+three the address works in a browser.
+
+Two positions are read, and both are ones a reader clicks: a link target, and
+an address written between angle brackets. The boundary is the path check's,
+for the same reasons. A fenced block and an indented block are passed over
+because they hold commands, and a code span is separated from the prose around
+it because a document showing the link syntax is showing it rather than writing
+a link.
+
+The residual is worth knowing before you read a green run. Nothing here reads
+what came back, so an address that answers with the wrong document answers
+correctly as far as this is concerned. And a host that is permanently
+unreachable looks exactly like one that is briefly unreachable, so it is
+reported as not judged for as long as it stays down and is never refused.
+
+Today it refuses nothing, because no document in this repository carries an
+external link:
+
+    go run ./cmd/linkcheck
+    linkcheck: 0 external link(s) across 22 tracked document(s), 0 reachable, 0 gone, 0 not judged
+
+That number is printed on the green route for exactly this reason: a run that
+read nothing and a run that found nothing are otherwise the same line. What
+stands behind the rule until a document carries a link is `internal/linkcheck`
+and `cmd/linkcheck`'s own fixtures.
 
 ## The default suite
 

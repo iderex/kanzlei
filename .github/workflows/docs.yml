@@ -29,8 +29,15 @@
 # or mismatched fence moves the boundary it uses to tell prose from a command
 # block, which turns it quiet rather than red.
 #
-# Both run under one published name. The name is what a protection rule holds
-# the branch by, so a second check name here would be a second entry the
+# The third rule is the half of a link the first one cannot resolve, in
+# internal/linkcheck. A target pointing inside this repository is a path and is
+# read above; a target pointing off this machine belongs to somebody this
+# repository has no relationship with, and it dies without anything here
+# changing. That is the only rule in this file that leaves the runner, and what
+# it refuses is held to the two answers that mean the address is not there.
+#
+# All three run under one published name. The name is what a protection rule
+# holds the branch by, so a second check name here would be a second entry the
 # required set has to be told about, for one gate that either passes or does
 # not.
 name: docs
@@ -88,6 +95,19 @@ jobs:
           # The same command CONTRIBUTING.md names, character for character.
           go run ./cmd/mdlint
 
+      - name: Every address this repository's documents point at off this machine
+        run: |
+          set -euo pipefail
+          # The same command CONTRIBUTING.md names, character for character.
+          #
+          # This is the one step here that leaves the runner. It refuses only
+          # the two answers that mean an address is not there, a 404 or a 410
+          # and a host that does not resolve, and it prints without refusing
+          # anything it could not judge. A gate that reddened because a host was
+          # slow would be re-run until it was green, which is the same as having
+          # no gate.
+          go run ./cmd/linkcheck
+
       - name: The rules are read by their own fixtures, not only by the tree
         run: |
           set -euo pipefail
@@ -95,4 +115,9 @@ jobs:
           # correct, which proves the state of the tree and not the guard.
           # These are the cases that prove the guards, including the one
           # character that is the mistake somebody actually makes.
-          go test ./internal/doclint ./cmd/doclint ./internal/mdlint ./cmd/mdlint -count=1
+          #
+          # It matters more for the link rule than for the other two, because
+          # this repository's documents carry no external link at all today, so
+          # that step is green over nothing and its fixtures are the only thing
+          # standing behind it.
+          go test ./internal/doclint ./cmd/doclint ./internal/mdlint ./cmd/mdlint ./internal/linkcheck ./cmd/linkcheck -count=1
