@@ -248,10 +248,10 @@ There is no second list, so the day a planned package lands the stale marker is
 reported by the import rules rather than having to be noticed here.
 
 It is a floor under the documents rather than a proof about them. `#113` is
-where the rest of the documentation gate is argued, and the parts not built are
-named there: the syntax of commands inside code blocks, and running the
-examples rather than reading them. A link pointing off this machine is the
-third rule below rather than one of the parts not built.
+where the rest of the documentation gate is argued, and the part not built is
+named there: running the examples rather than reading them. A link pointing off
+this machine is the third rule below, and the syntax of a command inside a
+block is the fourth, so neither is one of the parts not built.
 
 ### The document shape
 
@@ -347,6 +347,44 @@ That number is printed on the green route for exactly this reason: a run that
 read nothing and a run that found nothing are otherwise the same line. What
 stands behind the rule until a document carries a link is `internal/linkcheck`
 and `cmd/linkcheck`'s own fixtures.
+
+### The syntax of a command
+
+The fourth rule under the same check, and the only one that reads inside a
+block. One command:
+
+    go run ./cmd/cmdlint
+
+The three rules above read prose and pass over the blocks that hold commands.
+This one reads the blocks. It refuses a command a reader cannot run: a single
+or double quote that never closes, a substitution opened with a dollar and a
+parenthesis and never closed, a pipe or a logical operator with nothing after
+it, and a command still continued when its block ends. Only the unclosed
+direction of a substitution is refused, because a closing parenthesis with no
+opener is ordinary shell in a case arm.
+
+What it reads is narrow, and the narrowness is the rule rather than a gap in
+it. A block in this repository holds the command and the output the command
+produced, written identically, with no prompt or marker between them. Nothing
+in those two lines says which is which, and output carries apostrophes,
+unmatched brackets and anything else a program printed. So two shapes are read
+and no others. A block that declares a shell, where every line is a command
+because the block says so, of which this repository writes none today. And a
+continued command anywhere else, meaning a run of lines where every line but
+the last ends in an unescaped backslash, which is the one thing in such a block
+that no output produces.
+
+A single line in a block that declares nothing is therefore not read, and the
+run says how many of those there were rather than leaving the reach to be
+assumed:
+
+    go run ./cmd/cmdlint
+    cmdlint: 3 command(s) over 6 line(s) in 66 block(s) across 22 tracked document(s), 154 line(s) passed over
+
+Three commands is the whole subject in this tree, so what stands behind the
+rule is `internal/cmdlint` and `cmd/cmdlint`'s own fixtures rather than
+anything it found here. A heredoc body and a substitution written in backticks
+are not read at all, and are not read rather than being read badly.
 
 ## The default suite
 
