@@ -35,6 +35,7 @@ cmd/kanzlei: internal/build internal/server
 cmd/cmdlint: internal/cmdlint
 cmd/coverfloor: internal/coverfloor
 cmd/doclint: internal/doclint internal/importrules
+cmd/invariants: internal/invariants
 cmd/linkcheck: internal/linkcheck
 cmd/mdlint: internal/mdlint
 cmd/prhygiene: internal/prhygiene
@@ -64,6 +65,7 @@ internal/cmdlint:
 internal/coverfloor:
 internal/doclint:
 internal/importrules:
+internal/invariants:
 internal/linkcheck:
 internal/mdlint:
 internal/prhygiene:

@@ -1,0 +1,75 @@
+# The invariants over this repository's own Go source that are cheaper to read
+# out of the syntax than to derive from the types.
+#
+# docs/quality-parity.md is where this practice is argued against the gate this
+# project is measured beside. This file is the rule and internal/invariants is
+# what refuses a violation, so the note explains and nothing depends on
+# somebody having read it.
+#
+# One record per invariant, separated by a blank line. A record is a block of
+# "key: value" lines and every key below is required. A line starting with a
+# hash is a comment and a line of whitespace ends a record.
+#
+# The point of the file is that adding an invariant is adding a record here
+# rather than editing the checker. That holds for a new invariant whose shape
+# is one the checker already has an operator for: another forbidden call,
+# another name that may not hold a literal secret. It does not hold for a shape
+# none of the operators expresses, and there the operator comes first. The file
+# refuses a shape it does not implement rather than passing over it, for the
+# reason .editorconfig gives about a rule nothing applies.
+#
+# The shapes that exist, and what each one reads:
+#
+#   call-only-in          refuses a call to any name in "names" from a file
+#                         outside the directories in "paths"
+#   named-string-literal  refuses a non-empty string literal bound to an
+#                         identifier whose name contains any of "names"
+#   constrained-test-calls  refuses a test function in a file carrying the
+#                         build constraint in "constraint" that reaches none of
+#                         the calls in "names"
+#
+# Every value in "names" and "paths" is separated by spaces. "reason" is one
+# sentence and it is printed with the refusal, because a check that names a
+# rule the reader has to go and look up is one they argue with instead of
+# fixing.
+
+# The routing table is the list of ways into this service. A route registered
+# somewhere else is a way in that the table does not show, and the reader who
+# goes looking for the surface finds the table and stops. This is the invariant
+# with the smallest subject in the tree today, one route in one package, and
+# the largest one later: the API in #78 is where a second package first has a
+# reason to register something.
+invariant: no-route-outside-the-router
+shape: call-only-in
+names: Handle HandleFunc
+paths: internal/server
+reason: a route registered outside the routing table is an entry into this service that the table does not show
+
+# A credential written into the source ships in every binary, survives every
+# rotation, and is read by anybody who has the code. #34 asks for this check
+# from the other side, where the bootstrap that establishes the first
+# administrator must not become the back door, and names this file as its home
+# so that two issues do not build two checks that disagree.
+#
+# What it reads is the name and never the value, so a secret held in a
+# variable called s is invisible to it. That is the bound rather than a defect:
+# the mistake this is for is the one that is written plainly, and a check that
+# guessed at which literals looked secret would refuse this repository's own
+# fixtures.
+invariant: no-compiled-in-credential
+shape: named-string-literal
+names: password passwd passphrase secret credential apikey privatekey signingkey
+reason: a credential written into the source ships in every binary and survives every rotation
+
+# A suite behind the needsreal constraint is one the default run does not
+# execute, and the harness in test/needs-real-hardware-or-services turns that
+# into a refusal naming what is missing. A case that does not pass through the
+# harness gets none of that: it runs, fails inside an assertion on a connection
+# error, and the person reading the failure starts by suspecting the code under
+# test. Requiring the call is what keeps the roster complete, because a suite
+# that never reaches the gate never appears in the report either.
+invariant: needsreal-case-states-its-requirement
+shape: constrained-test-calls
+constraint: needsreal
+names: Start
+reason: a case behind this constraint that does not reach its suite gate states no requirement and appears in no roster
