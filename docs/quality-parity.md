@@ -74,8 +74,10 @@ language. Delivered by #106.
 ### Analyze (csharp)
 
 Replaced, and it is the job name of the entry above rather than a second
-practice. The counterpart here carries the name of whatever analyser #106
-selects, which is why this document does not write that name yet.
+practice. The target names one job per language and this project has one
+language, so the counterpart is a single job rather than a matrix entry. It is
+published as `Code scanning`, which is the string the proposed set below holds
+it by, and `.github/workflows/codeql.yml` is the authority for it.
 
 ### DCO sign-off
 

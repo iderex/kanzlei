@@ -26,7 +26,7 @@ by #2, and that pin is the authority for what the gate runs; the number here is
 the floor below which the module will not build.
 
 `go version` prints what a reader has locally. The pinned version prints from
-the module file once #2 lands.
+the module file.
 
 ## The four questions
 
