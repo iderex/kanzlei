@@ -379,12 +379,48 @@ run says how many of those there were rather than leaving the reach to be
 assumed:
 
     go run ./cmd/cmdlint
-    cmdlint: 3 command(s) over 6 line(s) in 66 block(s) across 22 tracked document(s), 154 line(s) passed over
+    cmdlint: 3 command(s) over 6 line(s) in 68 block(s) across 22 tracked document(s), 156 line(s) passed over
 
 Three commands is the whole subject in this tree, so what stands behind the
 rule is `internal/cmdlint` and `cmd/cmdlint`'s own fixtures rather than
 anything it found here. A heredoc body and a substitution written in backticks
 are not read at all, and are not read rather than being read badly.
+
+## The invariants over this repository's own source
+
+The check is published as `Invariants`. One command:
+
+    go run ./cmd/invariants
+
+It refuses the shapes where a single wrong line silently removes a control and
+nothing else in this tree would notice. A route registered outside the routing
+table, a credential written into the source, and a case behind a build
+constraint that never reaches the gate stating what it needs. None of the three
+is visible to a type checker and all three are visible in the syntax, which is
+why this is a lint over the tree rather than an analyser.
+
+`invariants.txt` at the root is the whole rule set, and this document does not
+restate it. Each record there carries the reason it exists, and the reason is
+printed with the refusal rather than left for a reader to go and look up.
+
+Adding an invariant is writing a record in that file. That holds for a rule
+whose shape one of the operators already expresses, which is another forbidden
+call or another name that may not hold a literal secret. A shape none of them
+expresses needs an operator first, and the file refuses a record naming a shape
+nothing implements rather than passing over it, for the reason `.editorconfig`
+gives about a rule nothing applies.
+
+There is no writing mode. Each of these has more than one legal repair and the
+cheapest one is usually wrong: a credential moves out of the source rather than
+being renamed, and a route moves into the table rather than the rule moving to
+where the route was.
+
+What it reads is the syntax and never the types. It says a call with that name
+is written there, which is what a grep would have said with none of the comment
+and string-literal exceptions a grep gets wrong. The credential rule reads the
+name a value is bound to and never the value, so a secret held under a name the
+file does not list is invisible to it. That is the bound rather than a defect:
+the mistake it is for is the one written plainly.
 
 ## The default suite
 

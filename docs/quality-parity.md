@@ -109,7 +109,21 @@ tier and a warning tier, and the warning tier is the size, which never blocks.
 ### Enforce greppable invariants
 
 Replaced. Same practice, a lint over the tree for invariants that are cheaper to
-grep than to type-check. Delivered by #110.
+grep than to type-check. Held by #110, under the check name `Invariants`, and
+the practice is here rather than the whole of that issue: `invariants.txt`
+declares the rules and `internal/invariants` refuses a violation, so an
+invariant is added by writing a record rather than by editing a checker.
+
+Three of the five invariants that issue names are in the file. One of the other
+two is refused from the other side rather than being owed here: no package may
+reach the index directly, and the line in `import-rules.txt` naming
+`internal/store` as reachable only from retrieval already refuses it, before the
+store itself has landed. The last one has no subject at all. No logging call may
+take a document or a passage, and there is no logging package to hold one, which
+is #90. The file is the authority for what is declared rather than this
+paragraph:
+
+    go run ./cmd/invariants
 
 ### Reject Trojan Source Unicode
 
