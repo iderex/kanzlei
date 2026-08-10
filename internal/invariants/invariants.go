@@ -4,9 +4,10 @@
 // The invariants worth holding here are the ones where a single wrong line
 // silently removes a control: a route registered somewhere the routing table
 // does not show, a credential written into the source, a suite behind a build
-// constraint that never reaches the gate stating what it needs. None of the
-// three is visible to a type checker, all three are visible in the syntax, and
-// each of them arrives as one line somebody wrote in a hurry.
+// constraint that never reaches the gate stating what it needs, a right granted
+// by an environment variable that no group mapping shows. None of them is
+// visible to a type checker, all of them are visible in the syntax, and each
+// arrives as one line somebody wrote in a hurry.
 //
 // The rules are in invariants.txt rather than in this file. That is the same
 // arrangement import-rules.txt and .editorconfig already have here, and it is
@@ -43,6 +44,7 @@ const (
 	ShapeCallOnlyIn         = "call-only-in"
 	ShapeNamedStringLiteral = "named-string-literal"
 	ShapeConstrainedTest    = "constrained-test-calls"
+	ShapeLiteralArgument    = "literal-argument"
 )
 
 // An Invariant is one record from the declaration file.
@@ -52,6 +54,7 @@ type Invariant struct {
 	Reason     string
 	Names      []string
 	Paths      []string
+	Words      []string
 	Constraint string
 	Line       int // where the record starts, for a refusal that names it
 }
@@ -140,6 +143,8 @@ func Parse(filename string, src []byte) ([]Invariant, error) {
 			current.Names = strings.Fields(value)
 		case "paths":
 			current.Paths = strings.Fields(value)
+		case "words":
+			current.Words = strings.Fields(value)
 		case "constraint":
 			current.Constraint = value
 		default:
@@ -182,6 +187,13 @@ func (inv *Invariant) validate(filename string) error {
 		if len(inv.Names) == 0 {
 			return fmt.Errorf("%s names no call a case has to reach", where)
 		}
+	case ShapeLiteralArgument:
+		if len(inv.Names) == 0 {
+			return fmt.Errorf("%s names no call", where)
+		}
+		if len(inv.Words) == 0 {
+			return fmt.Errorf("%s names no word the argument may not carry", where)
+		}
 	case "":
 		return fmt.Errorf("%s declares no shape", where)
 	default:
@@ -210,6 +222,8 @@ func Check(inv []Invariant, filename string, src []byte) ([]Violation, error) {
 			found = append(found, namedStringLiteral(rule, fset, file, filename)...)
 		case ShapeConstrainedTest:
 			found = append(found, constrainedTestCalls(rule, fset, file, filename)...)
+		case ShapeLiteralArgument:
+			found = append(found, literalArgument(rule, fset, file, filename)...)
 		}
 	}
 	sort.SliceStable(found, func(i, j int) bool { return found[i].Line < found[j].Line })
@@ -290,6 +304,42 @@ func namedStringLiteral(rule Invariant, fset *token.FileSet, file *ast.File, fil
 			if ok && carries(rule.Names, key.Name) && isNonEmptyString(node.Value) {
 				report(key.Name, key.Pos())
 			}
+		}
+		return true
+	})
+	return found
+}
+
+// literalArgument refuses a call to one of the named functions whose string
+// literal argument carries one of the declared words.
+//
+// The rule above reads the name a value is bound to inside a file. This one
+// reads a name the process is handed at startup, which no file binds and no
+// analyser sees, and the two together are what one done-when line in #34 asks
+// for.
+//
+// Every argument is read rather than only the first. Which position holds the
+// name differs between the two spellings a lookup is written in, and a rule
+// that counted positions would admit the second spelling of the first mistake.
+func literalArgument(rule Invariant, fset *token.FileSet, file *ast.File, filename string) []Violation {
+	var found []Violation
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || !contains(rule.Names, calledName(call.Fun)) {
+			return true
+		}
+		for _, arg := range call.Args {
+			text, ok := literalText(arg)
+			if !ok || !carries(rule.Words, text) {
+				continue
+			}
+			found = append(found, Violation{
+				Invariant: rule.ID,
+				Reason:    rule.Reason,
+				File:      filename,
+				Line:      fset.Position(arg.Pos()).Line,
+				Detail:    fmt.Sprintf("%s is read here, through %s", text, calledName(call.Fun)),
+			})
 		}
 		return true
 	})
@@ -389,18 +439,25 @@ func boundName(lhs ast.Expr) string {
 
 // isNonEmptyString reports whether the expression is a string literal with
 // something written between its quotes.
+func isNonEmptyString(expr ast.Expr) bool {
+	text, ok := literalText(expr)
+	return ok && strings.TrimSpace(text) != ""
+}
+
+// literalText is what stands between the quotes of a string literal, as it is
+// written.
 //
 // It judges the literal as written rather than as it decodes. Decoding it would
-// make an escape sequence disappear into the character it stands for, and this
-// only ever asks whether anything is there, so the two answers differ nowhere
-// that matters and the second needs an error case for bytes the parser has
-// already accepted.
-func isNonEmptyString(expr ast.Expr) bool {
+// make an escape sequence disappear into the character it stands for, and its
+// two callers ask only whether anything is there and whether a declared word is
+// in it, so the two answers differ nowhere that matters and the second needs an
+// error case for bytes the parser has already accepted.
+func literalText(expr ast.Expr) (string, bool) {
 	lit, ok := expr.(*ast.BasicLit)
 	if !ok || lit.Kind != token.STRING {
-		return false
+		return "", false
 	}
-	return strings.TrimSpace(strings.Trim(lit.Value, "`\"")) != ""
+	return strings.Trim(lit.Value, "`\""), true
 }
 
 // isCase reports whether a function is a case the test binary would run, which
