@@ -31,6 +31,12 @@ shape: constrained-test-calls
 constraint: needsreal
 names: Start
 reason: a case that does not reach its suite gate states no requirement
+
+invariant: no-administrative-right-from-the-environment
+shape: literal-argument
+names: Getenv LookupEnv
+words: admin superuser
+reason: an environment variable granting an administrative right is a way in that no group mapping shows
 `
 
 func declared(t *testing.T) []invariants.Invariant {
@@ -163,6 +169,105 @@ var s = "changeme"
 `
 	if found := check(t, "internal/auth/config.go", src); len(found) != 0 {
 		t.Fatalf("want a name outside the vocabulary left alone, got %v", found)
+	}
+}
+
+// The near miss for the environment invariant. It is the first-run convenience
+// rather than an invented mistake: the bootstrap needs an administrative group
+// before a mapping exists, reading one from the environment makes a deployment
+// work on the first try, and the variable then grants that right for as long as
+// it is set. The name is one word from the version that passes, and the word is
+// the whole rule.
+const administrativeGroupFromTheEnvironment = `package auth
+
+import "os"
+
+func bootstrapGroup() string {
+	if group := os.Getenv("KANZLEI_ADMIN_GROUP"); group != "" {
+		return group
+	}
+	return ""
+}
+`
+
+func TestAnAdministrativeRightReadFromTheEnvironmentIsRefused(t *testing.T) {
+	found := check(t, "internal/auth/bootstrap.go", administrativeGroupFromTheEnvironment)
+	v := onlyViolation(t, found, "no-administrative-right-from-the-environment")
+	if v.Line != 6 {
+		t.Fatalf("want the line the name is written on, got %d", v.Line)
+	}
+	if !strings.Contains(v.Detail, "KANZLEI_ADMIN_GROUP") {
+		t.Fatalf("want the variable named, got %q", v.Detail)
+	}
+}
+
+// The same call reading a variable that grants nothing. This is what keeps the
+// invariant from being a ban on reading the environment at all: which variable
+// is read is the rule, and where it is read is not.
+func TestAnEnvironmentVariableThatGrantsNothingIsNotRefused(t *testing.T) {
+	src := strings.Replace(administrativeGroupFromTheEnvironment, "KANZLEI_ADMIN_GROUP", "KANZLEI_ADDR", 1)
+	if found := check(t, "internal/auth/bootstrap.go", src); len(found) != 0 {
+		t.Fatalf("want an ordinary setting left alone, got %v", found)
+	}
+}
+
+// The other spelling of the same lookup, and the one somebody reaches for when
+// they want to know whether the variable was set rather than what it holds. The
+// name sits in the same argument and the rule reads every argument, so neither
+// spelling is the one that gets through.
+func TestTheOtherSpellingOfTheSameLookupIsRefused(t *testing.T) {
+	src := `package auth
+
+import "os"
+
+func bootstrapGroup() (string, bool) { return os.LookupEnv("KANZLEI_SUPERUSER") }
+`
+	onlyViolation(t, check(t, "internal/auth/bootstrap.go", src), "no-administrative-right-from-the-environment")
+}
+
+// The word is matched however the variable is spelled, because the two
+// conventions a deployment writes it in are the same variable.
+func TestTheWordIsFoundWhateverTheCase(t *testing.T) {
+	src := `package auth
+
+import "os"
+
+var group = os.Getenv("kanzlei_Admin")
+`
+	onlyViolation(t, check(t, "internal/auth/config.go", src), "no-administrative-right-from-the-environment")
+}
+
+// The bound the record states, proved rather than asserted. The rule reads the
+// literal in the call, so a name held in a constant and passed in reaches the
+// same variable and is invisible here. A green run says nothing about that
+// spelling, which is why the record says so where the rule is.
+func TestANameHeldInAConstantIsNotRead(t *testing.T) {
+	src := `package auth
+
+import "os"
+
+const adminGroupVariable = "KANZLEI_ADMIN_GROUP"
+
+var group = os.Getenv(adminGroupVariable)
+`
+	if found := check(t, "internal/auth/config.go", src); len(found) != 0 {
+		t.Fatalf("want the declared bound to hold, got %v", found)
+	}
+}
+
+// A call under one of the declared names that is given no string literal at
+// all. The harness in test/needs-real-hardware-or-services reads the
+// environment this way, one name at a time out of a slice, and refusing it
+// would be refusing the roster that reports what a run turned away.
+func TestALookupWithNoLiteralIsNotRefused(t *testing.T) {
+	src := `package needsreal
+
+import "os"
+
+func value(name string) string { return os.Getenv(name) }
+`
+	if found := check(t, "test/needs-real-hardware-or-services/harness.go", src); len(found) != 0 {
+		t.Fatalf("want a lookup with no literal left alone, got %v", found)
 	}
 }
 
@@ -369,6 +474,16 @@ reason: a credential written into the source ships in every binary
 shape: constrained-test-calls
 names: Start
 reason: a case that does not reach its gate states no requirement
+`,
+		"an argument rule naming no call": `invariant: no-administrative-right-from-the-environment
+shape: literal-argument
+words: admin
+reason: an environment variable granting an administrative right is a way in
+`,
+		"an argument rule naming no word": `invariant: no-administrative-right-from-the-environment
+shape: literal-argument
+names: Getenv
+reason: an environment variable granting an administrative right is a way in
 `,
 		"a name declared twice": `invariant: no-route-outside-the-router
 shape: call-only-in

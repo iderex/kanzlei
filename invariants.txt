@@ -27,6 +27,8 @@
 #   constrained-test-calls  refuses a test function in a file carrying the
 #                         build constraint in "constraint" that reaches none of
 #                         the calls in "names"
+#   literal-argument      refuses a call to any name in "names" that is given a
+#                         string literal carrying any of the words in "words"
 #
 # Every value in "names" and "paths" is separated by spaces. "reason" is one
 # sentence and it is printed with the refusal, because a check that names a
@@ -60,6 +62,26 @@ invariant: no-compiled-in-credential
 shape: named-string-literal
 names: password passwd passphrase secret credential apikey privatekey signingkey
 reason: a credential written into the source ships in every binary and survives every rotation
+
+# The third part of the same line in #34, and the one the record above cannot
+# reach. That rule reads the name a value is bound to inside a file. A right
+# granted by an environment variable is bound to nothing here: the name is a
+# string handed to a lookup, the value arrives at startup, and no analyser in
+# this tree reads either. The mistake is the first-run convenience, a variable
+# that fills in an administrative group so a deployment works before anybody has
+# read the guide, and it survives every rotation for the same reason a compiled
+# credential does, because nothing rotates it.
+#
+# What it reads is the literal in the call and never the value the process was
+# given, so a variable name assembled at runtime, or held in a constant and
+# passed in, is invisible to it. That is the bound rather than a defect, and it
+# is the same bound the record above carries: the mistake this is for is the one
+# written plainly.
+invariant: no-administrative-right-from-the-environment
+shape: literal-argument
+names: Getenv LookupEnv
+words: admin superuser
+reason: an environment variable granting an administrative right is a way in that no group mapping shows and no rotation closes
 
 # A suite behind the needsreal constraint is one the default run does not
 # execute, and the harness in test/needs-real-hardware-or-services turns that
