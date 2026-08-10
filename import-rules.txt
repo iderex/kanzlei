@@ -93,6 +93,16 @@ internal/authz:
 internal/auth: internal/authz
 internal/audit: internal/authz
 
+# The model runtime behind its interface, so an operator can change engines
+# without this project changing.
+#
+# The line is empty and that is the rule. This package declares the contract
+# and nothing else: it holds no address, no client and no permission decision,
+# so it cannot reach the principal, the permission set or the index. A contract
+# that could read any of those is one an adapter can consult, and an adapter
+# that consults a permission set is a second place the filter is applied.
+internal/runtime:
+
 # The suites that are not part of the default run, and the harness they are
 # written against. Nothing that ships may reach a harness that needs a real
 # model runtime, a real identity provider or a real source system: a package
@@ -130,11 +140,6 @@ internal/store:
 # left off.
 planned internal/retrieval #62
 internal/retrieval: internal/store
-
-# The model runtime behind its interface, so an operator can change engines
-# without this project changing.
-planned internal/runtime #71
-internal/runtime:
 
 # The fake source, which needs no service. It exists so the connector contract
 # suite can run under the conditions in #7, and a shipped file that reached it

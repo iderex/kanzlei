@@ -134,6 +134,14 @@ resolution is, and the per-source identifiers with how each one was
 established. It imports `internal/authz` and nothing else from this module.
 [principal.md](principal.md) is where the mapping rules are argued.
 
+`internal/runtime` declares the contract every model engine is reached through:
+three operations, the declaration an engine has to make about itself, and the
+four ways a call into one fails. It speaks to nothing. There is no address, no
+client and no retry here, because a package that both declared the contract and
+implemented one engine would be a contract shaped like that engine, and the
+adapters are #74 and #75. [decisions/0009-runtime.md](decisions/0009-runtime.md)
+is where the decision above it was taken.
+
 `internal/authz` resolves a permission set against a principal and answers
 whether the document may be shown. It is pure: it reads no source system, holds
 no clock and takes no decision about who the principal is, so the same set and
@@ -179,12 +187,18 @@ source and a fake runtime exist so that the contract suites can run under the
 conditions in #7. A shipped file that reached one would be a binary answering
 from a fixture corpus, and the answer would look exactly like a real one.
 
-None of the packages those four rules are about is in the tree yet. They are
-declared in `import-rules.txt` as planned, each carrying the issue that creates
-it, so the rule is written before the package rather than after the first
-violation. The day such a package lands, its marker is stale and the check says
-so rather than passing over it, which is what stops a planned line from becoming
-a place to keep a package nobody declared.
+One of the packages those four rules are about is in the tree, and it is
+`internal/runtime`, which arrived under #71 with the empty line the third rule
+needs. The rest are declared in `import-rules.txt` as planned, each carrying the
+issue that creates it, so the rule is written before the package rather than
+after the first violation. The day such a package lands, its marker is stale and
+the check says so rather than passing over it, which is what stops a planned
+line from becoming a place to keep a package nobody declared.
+
+The third rule is not yet enforceable in the direction it is written, and saying
+so is cheaper than a reader assuming otherwise. It refuses a store that can call
+a runtime, and there is no store; what is in the tree is the runtime half, whose
+own line permits nothing at all.
 
 Two rules that apply to what is there today:
 
