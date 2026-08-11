@@ -103,6 +103,20 @@ internal/audit: internal/authz
 # that consults a permission set is a second place the filter is applied.
 internal/runtime:
 
+# The fake runtime, which needs no model and no accelerator so that the suites
+# reaching a runtime can run under the conditions in #7.
+#
+# Its line names the contract and nothing else. A fake that could reach the
+# principal, the permission set or the index would be a second place those
+# decisions are taken, and a case written against it would be measuring the
+# fake rather than the code under test.
+#
+# It is test-only, which is #72's fifth line and not a preference. A shipped
+# file reaching this is a binary answering from a digest of the question, and
+# the answer looks exactly like one an engine produced.
+test-only internal/runtime/fake #72
+internal/runtime/fake: internal/runtime
+
 # The suites that are not part of the default run, and the harness they are
 # written against. Nothing that ships may reach a harness that needs a real
 # model runtime, a real identity provider or a real source system: a package

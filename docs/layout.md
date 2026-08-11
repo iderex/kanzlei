@@ -142,6 +142,13 @@ implemented one engine would be a contract shaped like that engine, and the
 adapters are #74 and #75. [decisions/0009-runtime.md](decisions/0009-runtime.md)
 is where the decision above it was taken.
 
+`internal/runtime/fake` is an engine that answers without a model, so the
+suites that reach a runtime can run under the conditions in #7. Everything it
+produces is derived from the request by a digest, and it can be told to
+misbehave in each of the ways a real engine does. It is test-only, and nothing
+that ships may import it. [fake-runtime.md](fake-runtime.md) is where what a
+result from it proves, and what it does not, is written down.
+
 `internal/authz` resolves a permission set against a principal and answers
 whether the document may be shown. It is pure: it reads no source system, holds
 no clock and takes no decision about who the principal is, so the same set and
@@ -187,9 +194,12 @@ source and a fake runtime exist so that the contract suites can run under the
 conditions in #7. A shipped file that reached one would be a binary answering
 from a fixture corpus, and the answer would look exactly like a real one.
 
-One of the packages those four rules are about is in the tree, and it is
-`internal/runtime`, which arrived under #71 with the empty line the third rule
-needs. The rest are declared in `import-rules.txt` as planned, each carrying the
+Two of the packages those four rules are about are in the tree.
+`internal/runtime` arrived under #71 with the empty line the third rule needs,
+and `internal/runtime/fake` arrived under #72 carrying the marker the fourth
+rule is written as: a line permitting the contract and nothing else, and a
+test-only marker that refuses a shipped file reaching it. The rest are declared
+in `import-rules.txt` as planned, each carrying the
 issue that creates it, so the rule is written before the package rather than
 after the first violation. The day such a package lands, its marker is stale and
 the check says so rather than passing over it, which is what stops a planned
