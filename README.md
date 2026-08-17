@@ -62,3 +62,9 @@ the whole of it today, and every later piece of this project attaches to it.
 ## Test
 
     go test ./...
+
+## License
+
+AGPL-3.0, copyright 2026 Nils Lehnen.
+
+The full text is in [LICENSE](LICENSE).
