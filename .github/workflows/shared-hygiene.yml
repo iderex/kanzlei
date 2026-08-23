@@ -1,0 +1,37 @@
+# The shared half of the hygiene rules, called rather than copied (#171).
+#
+# WHY THIS SITS BESIDE pr-hygiene.yml AND DOES NOT REPLACE IT. Both ask that a
+# change name the work it belongs to, and internal/prhygiene does more with the
+# answer than the shared check can. It reports in three registers rather than
+# one, so a merge commit exempted and a size not measured are printed as skips
+# instead of passing in silence; it reports the size of every change and refuses
+# none for it; and it refuses a range that holds no commit at all. The shared
+# check has no equivalent for any of that. A local rule goes only once the
+# shared check is shown to cover it, one rule at a time.
+#
+# WHAT THE CALL ADDS is the other direction: a placeholder title such as "wip",
+# and a closing keyword sitting inside a paragraph rather than on a line of its
+# own. Neither is read here today.
+#
+# THE SUBJECT RULE IS OFF. Both checks want the issue in the subject and they
+# disagree about the spelling. Of the 52 non-merge commits on main, 27 name an
+# issue, 17 of them as "for #N" and 6 in round brackets, and none uses the
+# square brackets the shared rule wants. Switching this one rule off says the
+# board does not meet it yet. Not calling the check at all would say nothing.
+#
+# PINNED BY HASH, NOT BY BRANCH. A moving reference would let the called
+# repository change what executes here without anybody reviewing it, and the
+# boards' own action-pin guards refuse it for that reason.
+name: Shared hygiene
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  hygiene:
+    uses: iderex/wache/.github/workflows/pr-hygiene.yml@9b311243c2d0d0ced7feb957a20bc178acce6a5d # v1.0.0
+    with:
+      subject_names_issue: false
