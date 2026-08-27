@@ -348,7 +348,7 @@ func sinkIsConsultedWhileProducing(r reporter, s Subject, rt runtime.Runtime) {
 // outside.
 func cancellationLeavesNothingBehind(r reporter, s Subject, rt runtime.Runtime) {
 	r.Helper()
-	before := goruntime.NumGoroutine()
+	before := quiesce()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -382,6 +382,27 @@ func cancellationLeavesNothingBehind(r reporter, s Subject, rt runtime.Runtime) 
 // run spent proving one guard is how a suite becomes one people run less
 // often.
 var settleWithin = 5 * time.Second
+
+// quiesce waits for the goroutine count to stop moving, and reports it.
+//
+// The baseline this case compares against has to be taken when nothing else is
+// going away, because a count read while a previous case's timers are still
+// unwinding is too high and a leak then hides underneath it. Two readings that
+// agree is the cheapest test for that, and a count that never settles is
+// reported as it stands rather than waited on forever.
+func quiesce() int {
+	deadline := time.Now().Add(settleWithin)
+	last := goruntime.NumGoroutine()
+	for time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+		now := goruntime.NumGoroutine()
+		if now == last {
+			return now
+		}
+		last = now
+	}
+	return last
+}
 
 // settle waits for the goroutines a cancelled generation was using to go away,
 // and refuses the ones that do not.

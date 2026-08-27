@@ -27,6 +27,11 @@ var declared = runtime.Capabilities{
 // truncates and an unbounded request does not.
 var words = []string{"alpha", "beta", "gamma", "delta"}
 
+// leaked is how many goroutines the leaking stub leaves behind. It is far
+// above any movement in the count that a test binary produces on its own, so
+// the case that reads the count fails for the leak rather than for the weather.
+const leaked = 16
+
 // A stub is an adapter written out rather than mocked, because every near miss
 // below is a field of it set to something an adapter would do wrong.
 //
@@ -55,10 +60,15 @@ type stub struct {
 	// unattributed produces an answer naming no model, which is an answer
 	// nothing downstream can cite.
 	unattributed bool
-	// leak keeps a goroutine working for that long after a cancelled
-	// generation has returned, which is the accelerator a cancellation was
+	// leak keeps goroutines working after a cancelled generation has returned,
+	// until the channel is closed. They are the accelerator a cancellation was
 	// meant to free.
-	leak time.Duration
+	//
+	// It is a channel rather than a sleep because the proof has to be about
+	// the count and not about timing: the goroutines exist from the moment the
+	// generation returns until the case that made them lets them go, and there
+	// are enough of them that no ordinary movement in the count hides them.
+	leak chan struct{}
 	// vectors is how many vectors come back for a batch, when that is to be
 	// the wrong count.
 	vectors int
@@ -117,8 +127,10 @@ func (s stub) Generate(ctx context.Context, req runtime.GenerateRequest, sink ru
 	for _, word := range produced {
 		if err := ctx.Err(); err != nil && !s.ignoreContext {
 			result.Finish = runtime.FinishCancelled
-			if s.leak > 0 {
-				go time.Sleep(s.leak)
+			if s.leak != nil {
+				for range leaked {
+					go func() { <-s.leak }()
+				}
 			}
 			return result, err
 		}
@@ -250,7 +262,6 @@ func TestEveryCaseRefusesTheAdapterItIsFor(t *testing.T) {
 		{"a-stream-ends-cleanly", stub{failure: errors.New("no answer")}, "an ordinary generation that failed"},
 		{"the-sink-is-consulted-while-the-answer-is-produced", stub{bufferFirst: true}, "an answer produced before the sink was consulted"},
 		{"a-cancellation-mid-stream-leaves-nothing-behind", stub{ignoreContext: true}, "a generation that carried on after the context ended"},
-		{"a-cancellation-mid-stream-leaves-nothing-behind", stub{leak: 2 * time.Second}, "a generation that stopped answering and did not stop working"},
 		{"an-over-long-prompt-is-refused-before-anything-is-produced", stub{ignoreLimit: true}, "a prompt longer than the declared context answered instead of refused"},
 		{"an-answer-stopped-at-the-bound-says-so", stub{hideBound: true}, "an answer cut at the bound reported as one the engine ended"},
 		{"an-answer-stopped-at-the-bound-says-so", stub{failure: errors.New("no answer")}, "a bounded generation that failed"},
@@ -334,6 +345,29 @@ func failing(t *testing.T, name string, failure error) []string {
 		}
 	}
 	return r.failures
+}
+
+// TestALeakedGoroutineIsRefused is the half of the cancellation case that a
+// returned handler does not prove. An adapter can return the moment a context
+// ends and leave the work going, which is the accelerator the cancellation was
+// meant to free, and from outside the only readable trace is the count.
+//
+// The goroutines are held on a channel this case closes, so what is proved is
+// the count rather than a race between a sleep and a deadline.
+func TestALeakedGoroutineIsRefused(t *testing.T) {
+	patient := settleWithin
+	settleWithin = 100 * time.Millisecond
+	defer func() { settleWithin = patient }()
+
+	held := make(chan struct{})
+	defer close(held)
+
+	if failures := only(t, "a-cancellation-mid-stream-leaves-nothing-behind", stub{leak: held}); len(failures) == 0 {
+		t.Fatal("a generation that stopped answering and did not stop working was accepted")
+	}
+	if failures := only(t, "a-cancellation-mid-stream-leaves-nothing-behind", stub{}); len(failures) != 0 {
+		t.Fatalf("the same case refused an adapter that stopped working when it stopped answering: %v", failures)
+	}
 }
 
 // TestAPanicThatIsNotACaseEndingIsNotSwallowed holds the one thing the
