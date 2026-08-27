@@ -116,6 +116,20 @@ internal/runtime:
 # the answer looks exactly like one an engine produced.
 test-only internal/runtime/fake #72
 internal/runtime/fake: internal/runtime
+internal/runtime/fake +test: internal/runtime/contract
+
+# The suite every adapter is handed to, which is #73.
+#
+# Its line names the contract and nothing else, for the same reason the fake's
+# does. A suite that could reach the principal, the permission set or the index
+# would be judging an adapter against decisions taken somewhere else, and a
+# case that went red would not say which of the two had moved.
+#
+# It is test-only, and the marker is doing more here than it looks. This
+# package is built out of testing and it drives an engine, so a shipped file
+# reaching it is a binary that carries a suite and can be made to generate.
+test-only internal/runtime/contract #73
+internal/runtime/contract: internal/runtime
 
 # The suites that are not part of the default run, and the harness they are
 # written against. Nothing that ships may reach a harness that needs a real

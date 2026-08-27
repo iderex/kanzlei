@@ -149,6 +149,14 @@ misbehave in each of the ways a real engine does. It is test-only, and nothing
 that ships may import it. [fake-runtime.md](fake-runtime.md) is where what a
 result from it proves, and what it does not, is written down.
 
+`internal/runtime/contract` is the suite an adapter is handed to, so that the
+edges the engines differ at are pinned once rather than written out again per
+adapter. It also holds the register of adapters and compares it against the
+tree in both directions, which is what makes an adapter that nothing hands to
+the suite a red run rather than a gap. It is test-only and it imports the
+contract and nothing else. [runtimes.md](runtimes.md) is where a difference it
+finds is recorded, with the engine and version it was observed on.
+
 `internal/authz` resolves a permission set against a principal and answers
 whether the document may be shown. It is pure: it reads no source system, holds
 no clock and takes no decision about who the principal is, so the same set and
