@@ -336,10 +336,15 @@ func TestATimeoutIsTheContextEndingRatherThanAnAnswer(t *testing.T) {
 		t.Fatalf("New refused a hanging engine: %v", err)
 	}
 
+	// The clock is read before the deadline is set, not after. Whatever passes
+	// between the two lines is time the call really did wait, and a
+	// measurement that starts after the deadline cannot see it: on a loaded
+	// runner this case reported a wait of 17.6ms against a deadline of 20ms
+	// and failed while the engine had behaved.
+	started := time.Now()
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
 	defer cancel()
 
-	started := time.Now()
 	_, _, _, err = collect(t, engine, ctx, ask)
 	if !errors.Is(err, runtime.ErrUnreachable) {
 		t.Fatalf("a deadline reached before an answer failed with %v", err)
