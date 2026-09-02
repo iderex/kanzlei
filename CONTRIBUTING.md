@@ -1,17 +1,23 @@
 # Contributing
 
-## Before you start: this repository has no licence yet
+## Before you start: the licence a contribution is made under
 
-    gh api repos/iderex/kanzlei --jq '.license == null'
+    gh api repos/iderex/kanzlei --jq .license.spdx_id
+    "AGPL-3.0"
 
-returns `true`. Until a licence file lands there is nothing either side can
-point at that says what may be done with a contribution, and the sign-off below
-certifies a contribution under "the open source license indicated in the file"
-that does not yet exist. #101 is the issue that adds it and it is blocked on a
-decision recorded in #124.
+The full text is in `LICENSE`, copied unmodified. The sign-off below certifies
+a contribution under "the open source license indicated in the file", and that
+is the file it points at, so both sides now have something to point at that
+says what may be done with a contribution.
 
-You are welcome to open an issue, and to discuss a change, now. A code
-contribution is better held until the licence is in the tree.
+This section said the opposite until 2026-09-02, and it asked for a code
+contribution to be held back until a licence landed. That wait is over and the
+holding back was never owed after 2026-08-17, which is when the licence landed.
+If you held work back on the strength of the sentence that stood here, send it.
+
+#101 stays open and does not reinstate the wait: what is left of it is the
+per-file header the licence expects and the check that refuses a file without
+one, neither of which stops a contribution being made or accepted.
 
 ## No work without an issue
 
