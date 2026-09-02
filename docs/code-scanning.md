@@ -81,12 +81,19 @@ than no alert.
     gh workflow run code-scanning.yml -f include_fixture=true
 
 That route only exists once the workflow is on the default branch, because a
-manual trigger is read from there and from nowhere else. So the proof follows
-the landing rather than preceding it, and #106 is where the run is recorded: two
-runs of the same workflow, one red and one green, differing only in whether the
-defective file was compiled, is what stands behind the claim that this gate
-refuses anything. Until that record exists, the claim in this section is a claim
-and the sentence saying so has not been removed.
+manual trigger is read from there and from nowhere else. So the proof followed
+the landing rather than preceding it, and the record is in #106, which is
+closed: two runs of the same workflow, one red and one green, differing only in
+whether the defective file was compiled.
+
+This paragraph said the record did not exist yet and that the claim in this
+section was therefore a claim. It exists, so the claim is backed by a run, and
+what the run backs is worth stating exactly rather than being left to widen on
+its own. It shows that this workflow reddens when the analyser reports a
+finding at or above the floor in `scan-floor.txt`, on one constructed defect, in
+one language, on the hosting service's own analyser. It shows nothing about
+which defects that analyser finds, and a green run here has never been evidence
+that a tree holds none.
 
 The half of the decision that does not need the hosting service is proved in the
 suite instead, on fixtures:

@@ -49,7 +49,10 @@ jobs:
   code-scanning:
     # The name published as the check. It is an interface: a protection rule
     # names a check as a string, so renaming this silently stops it being
-    # required. #115 is where it is considered for the required set.
+    # required. #115 asked which checks belong in front of the branch and is
+    # closed; what it produced is the proposed set in docs/quality-parity.md,
+    # which is where this name is argued for and where a change to the ruleset
+    # would be argued.
     name: Code scanning
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -26,8 +26,11 @@
 // which dials is invisible to it, and so is a dial through an interface value
 // or a variable holding a function. The reason comment that excuses an address
 // this check cannot read is a sentence a person writes and nothing verifies. It
-// is a floor under the condition, not a proof of it, and #114 re-proves the
-// condition later on evidence from a run rather than from source.
+// is a floor under the condition, not a proof of it. What re-proves it on
+// evidence from a run rather than from source landed under #114 and is the step
+// in .github/workflows/tests.yml that removes the route out and then proves it
+// gone. #184 is what neither reaches: a test needing a display or elevated
+// rights is refused by nothing here and by no fixture there.
 package testreach
 
 import (
