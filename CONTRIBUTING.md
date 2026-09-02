@@ -347,12 +347,19 @@ Today it refuses nothing, because no document in this repository carries an
 external link:
 
     go run ./cmd/linkcheck
-    linkcheck: 0 external link(s) across 22 tracked document(s), 0 reachable, 0 gone, 0 not judged
+    linkcheck: 0 external link(s) across 24 tracked document(s), 0 reachable, 0 gone, 0 not judged
 
-That number is printed on the green route for exactly this reason: a run that
-read nothing and a run that found nothing are otherwise the same line. What
-stands behind the rule until a document carries a link is `internal/linkcheck`
-and `cmd/linkcheck`'s own fixtures.
+The first number is printed on the green route for exactly this reason: a run
+that read nothing and a run that found nothing are otherwise the same line.
+What stands behind the rule until a document carries a link is
+`internal/linkcheck` and `cmd/linkcheck`'s own fixtures.
+
+The second number counts the tree rather than the findings, so adding one
+document moves it and this paste goes stale without anybody touching this
+section. It stood at 22 against a tree of 24 until 2026-09-02, which is #180.
+Compare the shape of the line you get rather than its numerals, and if the
+count differs from the one here, the difference is documents that landed after
+this paragraph was written.
 
 ### The syntax of a command
 
@@ -385,11 +392,15 @@ run says how many of those there were rather than leaving the reach to be
 assumed:
 
     go run ./cmd/cmdlint
-    cmdlint: 3 command(s) over 6 line(s) in 68 block(s) across 22 tracked document(s), 156 line(s) passed over
+    cmdlint: 4 command(s) over 8 line(s) in 71 block(s) across 24 tracked document(s), 161 line(s) passed over
 
-Three commands is the whole subject in this tree, so what stands behind the
+Four commands is the whole subject in this tree, so what stands behind the
 rule is `internal/cmdlint` and `cmd/cmdlint`'s own fixtures rather than
-anything it found here. A heredoc body and a substitution written in backticks
+anything it found here. Every numeral on that line except the first two counts
+the tree, and the same caution as the paste above applies: a document or a
+fenced block added anywhere moves them, they stood at 68 blocks over 22
+documents and 156 passed-over lines until 2026-09-02, and #180 is where that
+was found. A heredoc body and a substitution written in backticks
 are not read at all, and are not read rather than being read badly.
 
 ## The invariants over this repository's own source
