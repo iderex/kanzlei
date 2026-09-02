@@ -188,7 +188,9 @@ either repository.
 ## Additions this project needs beyond the target
 
 Each of these exists because of something this project does that the target does
-not.
+not. Two of them have landed and are marked so, because a list that reads
+identically for what is built and what is planned is a list nobody can plan
+from.
 
 The authorisation conformance suite, #25. Every retrieval-shaped route is
 checked against every user's expected visible set, including what reached the
@@ -198,11 +200,13 @@ authorisation boundary of this kind to prove.
 The adversarial suite, #26. The leaks this project is most likely to have,
 written as tests before they are found in the field.
 
-The headless, unelevated and offline conformance gate, #114. The condition is
-established by #7; this proves it still holds on every pull request, which is
-the only way an intention like that survives.
+The headless, unelevated and offline conformance gate, #114, which is in the
+tree. The condition is established by #7; this proves it still holds on every
+pull request, which is the only way an intention like that survives. What it
+does not reach is #184.
 
-The import boundary, #111. Architecture rules turned into tests, so a retrieval
+The import boundary, #111, which is in the tree. Architecture rules turned into
+tests, so a retrieval
 package cannot acquire a path around the permission filter by an import nobody
 noticed.
 
@@ -292,7 +296,11 @@ dependency on the network, and that is always the change's fault and never the
 world's. There is no second job and no second string a protection rule could
 name, because the condition binds the run rather than the job and a second job
 would have to run the whole suite again to be about anything. What the condition
-still does not reach is in #114, which stays open on it.
+still does not reach is written into #114, which is closed as completed: a
+display and an accelerator are absences this job verifies about the runner
+rather than properties it established, and no fixture proves the job refuses a
+test that needs either of those two. #184 is where that residual is held, and
+it is open.
 
 `Code scanning`. Without it a defect class the compiler does not see lands and
 nothing reads the tree for it. It also carries the one proof route in this

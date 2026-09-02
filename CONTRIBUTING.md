@@ -523,8 +523,13 @@ beside it.
 What this does not reach: a test that calls a helper which dials, a dial through
 an interface value, and a reason comment that is simply wrong. It reads direct
 calls through a package selector and nothing else. It is a floor under the
-condition rather than a proof of it, and #114 is where the condition is
-re-proved later from a run rather than from source.
+condition rather than a proof of it. The proof from a run rather than from
+source is #114 and it is in the tree: the `Tests` job takes the route out away
+from the user the suite runs as and proves it gone in a step that runs before
+anything is read into the run. What that still does not reach is #184, which is
+open: a test needing a display or elevated rights is refused by no fixture, and
+the absence of a display and of an accelerator is verified about the runner
+rather than established by the job.
 
 The default gate does not run `test/needs-real-hardware-or-services/`, because
 a check that needs a model, an identity provider or a source system is a check

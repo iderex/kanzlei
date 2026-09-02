@@ -99,10 +99,13 @@ refuses a chunk. There is no finish reason for either, and a result carrying a
 reason that did not happen is what a caller reads as a complete answer.
 
 A generation the context ended is the one case that comes back with both: a
-result saying it was cancelled, and the context's own error. That choice is
-this fake's and not the contract's. #73 is where it becomes a property every
-adapter is held to, and until then an adapter written to match this is written
-to match something stated rather than something assumed.
+result saying it was cancelled, and the context's own error. That was this
+fake's choice and not the contract's until the suite landed, and it is the
+contract's now. `cancellationLeavesNothingBehind` in
+`internal/runtime/contract` fails a subject that answers a cancelled generation
+without the error and one that ends it under any other finish reason, so every
+adapter is held to it and an adapter written to match this fake is matching the
+suite rather than one implementation's habit.
 
 ## Nothing that ships may reach it
 
@@ -119,7 +122,18 @@ result for a call to be. What a tool may be is #82 and has not been decided, so
 a shape invented here would be a second decision that #82 then has to accept or
 rename.
 
-The fake has not been run against a contract suite, because there is none. #73
-is the suite that pins what every adapter has to do, and until it exists the
-cases in this package hold this fake against the contract as it is written
-rather than against the behaviour the adapters will share.
+This section said the fake had not been run against a contract suite because
+there was none. There is one, and it runs: `internal/runtime/fake` hands this
+fake to `contract.Run` under each of the suite's conditions, in the default
+gate, which is #73's fourth done-condition rather than something this document
+arranged.
+
+What that adds to the paragraph above is narrower than it sounds and the
+narrowness is the point. This fake is the only implementation of the contract
+in the tree, so passing the suite says the fake and the suite agree, and says
+nothing whatever about an engine. A green run here is still not evidence about
+a model, and it is not evidence that the suite is complete either: a case
+nobody wrote is a quirk this project has not met yet. What it does buy is that
+the cases in this package are no longer the only thing holding the fake to
+anything, and that the first real adapter meets the suite rather than
+discovering it.

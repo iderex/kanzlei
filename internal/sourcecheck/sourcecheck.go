@@ -141,8 +141,10 @@ func Bare(filename string, src []byte) ([]Suppression, error) {
 //
 // The bound is that convention. A function returning its error first, or
 // returning two, is read by this as a discard of something else or not read at
-// all. Nothing here consults the types, and #111 is where a check that does
-// would belong.
+// all. Nothing here consults the types, and nothing else in this tree does
+// either: #111 delivered the import boundary and is closed, so a check that
+// read the types would need an issue of its own before it needed a home. Read
+// the bound as standing rather than as owed.
 func discardsACallResult(assign *ast.AssignStmt) bool {
 	if len(assign.Lhs) == 0 {
 		return false
