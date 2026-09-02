@@ -78,7 +78,13 @@ run does not upload its findings, because they describe a file that ships
 nowhere and an alert naming a path nobody can find in their checkout is worse
 than no alert.
 
-    gh workflow run code-scanning.yml -f include_fixture=true
+    gh workflow run codeql.yml -f include_fixture=true
+
+Three names sit on this one workflow and only two of them are addressable. Its
+own name is `code-scanning`, its file is `codeql.yml`, and the check it
+publishes is `Code scanning`. `gh workflow run` takes the first or the second,
+and this line uses the file. It named the workflow's own name with the file's
+extension glued on until 2026-09-02, which resolves to nothing and is #185.
 
 That route only exists once the workflow is on the default branch, because a
 manual trigger is read from there and from nowhere else. So the proof followed
