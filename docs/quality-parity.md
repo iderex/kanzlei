@@ -224,8 +224,8 @@ which is a fact about the fuzzer's luck rather than about the change.
 
 ## The set proposed as required
 
-This is a proposal. Changing the required set is a maintainer action, and this
-document does not perform it.
+This is a proposal. Changing the required set is mine to do, and this document
+does not perform it.
 
 The current state, read rather than described:
 

@@ -17,8 +17,8 @@ A vulnerability is never reported in a public issue, a pull request, a
 discussion, or anywhere else a stranger can read it. This project exists to keep
 a document away from somebody who may not read it, so a public description of how
 to reach one is not a report of the failure, it is the failure happening. The
-private route puts the report in front of a maintainer without putting it in
-front of everyone else at the same time.
+private route puts the report in front of me without putting it in front of
+everyone else at the same time.
 
 If the private route is unreachable for you, open a public issue that says only
 that you have something to report and holds no detail at all: no path, no
