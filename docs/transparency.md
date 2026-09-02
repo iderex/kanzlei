@@ -224,16 +224,25 @@ That is about obligations along a value chain owed towards a provider who
 integrated a component. It is not a transparency duty owed to the person reading
 a generated answer, and it does not reach Article 50.
 
-There is a smaller point that has to be made because it is true today. The
-exclusion in Article 2(12) is about a system released under a free and
-open-source licence, and this repository is not released under one:
+This paragraph carried a smaller point until 2026-09-02 and it has stopped
+being true, which is worth stating rather than deleting. It said the exclusion
+in Article 2(12) is about a system released under a free and open-source
+licence, that this repository was released under none, and that the premise of
+the exclusion was therefore not met here at all. A licence landed on
+2026-08-17:
 
-    gh api repos/iderex/kanzlei --jq '.license == null'
-    true
+    gh api repos/iderex/kanzlei --jq .license.spdx_id
+    "AGPL-3.0"
 
-So the premise of that exclusion is not met here at all, quite apart from the
-exception written into it. #101 is the issue that adds a licence and #124 is
-where the choice is open.
+The GNU Affero General Public License is a free and open-source licence, so the
+premise is met now. The direction that changes is the one that matters least
+and the one that matters most at the same time. It changes nothing about the
+conclusion above, because Article 50 is written into the exception by name and
+a system falling under it is outside what the exclusion excludes whatever
+licence it carries. It changes what the argument is doing: while the premise
+failed, the whole section was moot here and could be read as an academic note.
+It is load bearing now, and it is the paragraphs above this one rather than
+this one that carry it.
 
 ## What this project does about it, and what it does not
 

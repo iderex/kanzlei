@@ -1,17 +1,23 @@
 # Contributing
 
-## Before you start: this repository has no licence yet
+## Before you start: the licence a contribution is made under
 
-    gh api repos/iderex/kanzlei --jq '.license == null'
+    gh api repos/iderex/kanzlei --jq .license.spdx_id
+    "AGPL-3.0"
 
-returns `true`. Until a licence file lands there is nothing either side can
-point at that says what may be done with a contribution, and the sign-off below
-certifies a contribution under "the open source license indicated in the file"
-that does not yet exist. #101 is the issue that adds it and it is blocked on a
-decision recorded in #124.
+The full text is in `LICENSE`, copied unmodified. The sign-off below certifies
+a contribution under "the open source license indicated in the file", and that
+is the file it points at, so both sides now have something to point at that
+says what may be done with a contribution.
 
-You are welcome to open an issue, and to discuss a change, now. A code
-contribution is better held until the licence is in the tree.
+This section said the opposite until 2026-09-02, and it asked for a code
+contribution to be held back until a licence landed. That wait is over and the
+holding back was never owed after 2026-08-17, which is when the licence landed.
+If you held work back on the strength of the sentence that stood here, send it.
+
+#101 stays open and does not reinstate the wait: what is left of it is the
+per-file header the licence expects and the check that refuses a file without
+one, neither of which stops a contribution being made or accepted.
 
 ## No work without an issue
 
@@ -341,12 +347,19 @@ Today it refuses nothing, because no document in this repository carries an
 external link:
 
     go run ./cmd/linkcheck
-    linkcheck: 0 external link(s) across 22 tracked document(s), 0 reachable, 0 gone, 0 not judged
+    linkcheck: 0 external link(s) across 24 tracked document(s), 0 reachable, 0 gone, 0 not judged
 
-That number is printed on the green route for exactly this reason: a run that
-read nothing and a run that found nothing are otherwise the same line. What
-stands behind the rule until a document carries a link is `internal/linkcheck`
-and `cmd/linkcheck`'s own fixtures.
+The first number is printed on the green route for exactly this reason: a run
+that read nothing and a run that found nothing are otherwise the same line.
+What stands behind the rule until a document carries a link is
+`internal/linkcheck` and `cmd/linkcheck`'s own fixtures.
+
+The second number counts the tree rather than the findings, so adding one
+document moves it and this paste goes stale without anybody touching this
+section. It stood at 22 against a tree of 24 until 2026-09-02, which is #180.
+Compare the shape of the line you get rather than its numerals, and if the
+count differs from the one here, the difference is documents that landed after
+this paragraph was written.
 
 ### The syntax of a command
 
@@ -379,11 +392,15 @@ run says how many of those there were rather than leaving the reach to be
 assumed:
 
     go run ./cmd/cmdlint
-    cmdlint: 3 command(s) over 6 line(s) in 68 block(s) across 22 tracked document(s), 156 line(s) passed over
+    cmdlint: 4 command(s) over 8 line(s) in 71 block(s) across 24 tracked document(s), 161 line(s) passed over
 
-Three commands is the whole subject in this tree, so what stands behind the
+Four commands is the whole subject in this tree, so what stands behind the
 rule is `internal/cmdlint` and `cmd/cmdlint`'s own fixtures rather than
-anything it found here. A heredoc body and a substitution written in backticks
+anything it found here. Every numeral on that line except the first two counts
+the tree, and the same caution as the paste above applies: a document or a
+fenced block added anywhere moves them, they stood at 68 blocks over 22
+documents and 156 passed-over lines until 2026-09-02, and #180 is where that
+was found. A heredoc body and a substitution written in backticks
 are not read at all, and are not read rather than being read badly.
 
 ## The invariants over this repository's own source
@@ -533,6 +550,40 @@ authored with. If you have already committed without it:
     git rebase --signoff <base>
 
 adds it to every commit in the range.
+
+## Sign your commits, which is not the same thing
+
+The sign-off above is a trailer in a commit message. This is a cryptographic
+signature over the commit itself, made with a key your account has registered,
+and `git commit -s` does not make one. The two share a verb and nothing else,
+and doing the first correctly satisfies none of the second.
+
+The ruleset in front of the default branch requires it:
+
+    gh api repos/iderex/kanzlei/rulesets/20487686 \
+      --jq '{bypass:.bypass_actors, rules:[.rules[].type]}'
+    {"bypass":[],"rules":["deletion","non_fast_forward","pull_request","required_signatures"]}
+
+The bypass list is empty, so it holds for every account, mine included.
+
+Read the shape of the refusal before you meet it, because it arrives with
+nothing to read. No check goes red: the sign-off check passes on the trailer,
+the hygiene check passes, the suite passes. There is no step to re-run and no
+log naming the reason. What happens is that the merge does not go through, at
+the point where the work is finished, which is the most annoying moment to
+learn a rule.
+
+Configure signing once, with whichever key type your account has registered,
+and `git log --format='%h %G? %s'` prints a `G` beside a commit whose signature
+verified. If a branch already carries unsigned commits, re-sign the range:
+
+    git rebase --exec 'git commit --amend --no-edit -S' <base>
+
+If signing starts failing part way through a piece of work, that is a stop
+rather than something to get around. `git commit --no-gpg-sign` and
+`git -c commit.gpgsign=false commit` both produce a commit that builds, passes
+every check here, and cannot be merged, so the only thing either of them buys
+is finding out later.
 
 ## What a good change looks like
 
