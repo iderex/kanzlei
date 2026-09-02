@@ -540,6 +540,40 @@ authored with. If you have already committed without it:
 
 adds it to every commit in the range.
 
+## Sign your commits, which is not the same thing
+
+The sign-off above is a trailer in a commit message. This is a cryptographic
+signature over the commit itself, made with a key your account has registered,
+and `git commit -s` does not make one. The two share a verb and nothing else,
+and doing the first correctly satisfies none of the second.
+
+The ruleset in front of the default branch requires it:
+
+    gh api repos/iderex/kanzlei/rulesets/20487686 \
+      --jq '{bypass:.bypass_actors, rules:[.rules[].type]}'
+    {"bypass":[],"rules":["deletion","non_fast_forward","pull_request","required_signatures"]}
+
+The bypass list is empty, so it holds for every account, mine included.
+
+Read the shape of the refusal before you meet it, because it arrives with
+nothing to read. No check goes red: the sign-off check passes on the trailer,
+the hygiene check passes, the suite passes. There is no step to re-run and no
+log naming the reason. What happens is that the merge does not go through, at
+the point where the work is finished, which is the most annoying moment to
+learn a rule.
+
+Configure signing once, with whichever key type your account has registered,
+and `git log --format='%h %G? %s'` prints a `G` beside a commit whose signature
+verified. If a branch already carries unsigned commits, re-sign the range:
+
+    git rebase --exec 'git commit --amend --no-edit -S' <base>
+
+If signing starts failing part way through a piece of work, that is a stop
+rather than something to get around. `git commit --no-gpg-sign` and
+`git -c commit.gpgsign=false commit` both produce a commit that builds, passes
+every check here, and cannot be merged, so the only thing either of them buys
+is finding out later.
+
 ## What a good change looks like
 
 One topic. A pull request that changes two unrelated things has a description
