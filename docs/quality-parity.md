@@ -23,11 +23,11 @@ memory, because it is evidence about another repository and it moves.
 
     gh api repos/iderex/jellyfin-plugin-sso/rulesets/18802863 \
       --jq '{enforcement, bypass:.bypass_actors, required:[.rules[].parameters.required_status_checks[]?.context]}'
-    {"bypass":[],"enforcement":"active","required":["build","ABI floor build","Package (JPRM) / Build package","Package (JPRM) / Generate SBOM","CodeQL","Analyze (csharp)","DCO sign-off","Deterministic PR-hygiene checks","Enforce greppable invariants","Reject Trojan Source Unicode","Audit workflows (zizmor)","prettier","dependency-review"]}
+    {"bypass":[],"enforcement":"active","required":["build","ABI floor build","Package (JPRM) / Build package","CodeQL","Analyze (csharp)","DCO sign-off","Deterministic PR-hygiene checks","Enforce greppable invariants","Reject Trojan Source Unicode","Audit workflows (zizmor)","prettier","dependency-review"]}
 
     gh api repos/iderex/jellyfin-plugin-sso/actions/workflows --jq '.workflows[] | "\(.name)\t\(.path)\t\(.state)"'
 
-Parity is not thirteen check names copied across. Some of them are about a
+Parity is not twelve check names copied across. Some of them are about a
 plugin binary and a plugin catalogue and have no counterpart in a service. Some
 have a counterpart under a different name because the language differs. And this
 project needs gates that one does not, because it takes untrusted document bytes
@@ -37,7 +37,10 @@ puts text from those documents into a language model.
 ## The target's required set, mapped
 
 Each entry is matched, replaced, or not applicable, with the reason in one line
-and the issue that delivers it here.
+and the issue that delivers it here. One section below outlived its entry: the
+target dropped a required context and the section stays, saying so, because the
+counterpart it hands over was never owed on the strength of the target holding
+it.
 
 ### build
 
@@ -65,6 +68,17 @@ runs, which is a different artefact with a different failure mode, and it is
 
 Replaced. The obligation is the same, a machine-readable statement of what is
 inside the artefact, and the artefact differs. Delivered by #102.
+
+This entry is no longer in the reading above it and the section stays. It was
+in the target's required set when this walk was written and the set has since
+dropped it, which is the fourth state an entry can be in and the one the
+opening sentence of this section does not name. It is kept rather than deleted
+because the obligation was never derived from the target's configuration: #102
+asks for the notices and the bill of materials on this project's own grounds,
+and #112 asks for one per release artefact. What the target requires is
+evidence about what a comparable project holds itself to, and losing an entry
+there weakens the argument by one example rather than removing a requirement
+here.
 
 ### CodeQL
 
@@ -234,11 +248,20 @@ The current state, read rather than described:
 
     gh api repos/iderex/kanzlei/rulesets/20487686 \
       --jq '{enforcement, bypass:.bypass_actors, rules:[.rules[].type], required:[.rules[].parameters.required_status_checks[]?.context]}'
-    {"bypass":[],"enforcement":"active","required":[],"rules":["deletion","non_fast_forward","pull_request"]}
+    {"bypass":[],"enforcement":"active","required":[],"rules":["deletion","non_fast_forward","pull_request","required_signatures"]}
 
-So today the branch refuses deletion, refuses a non-fast-forward, and requires a
-pull request, and no check is a merge condition. Every check in front of this
-branch is advisory by configuration, whatever any document says about it.
+So today the branch refuses a deletion, refuses a non-fast-forward, requires a
+pull request, and requires a verified signature on every commit, and no check is
+a merge condition. Every check in front of this branch is advisory by
+configuration, whatever any document says about it.
+
+The signature rule is worth separating from the rest, because it is the one a
+contributor meets as a refusal rather than as a red result. There is nothing to
+read and nothing to re-run: a branch carrying one commit whose signature does
+not verify does not merge, and the repair is to sign that commit. This
+quotation carried three rules and not four until 2026-09-02, so the sentence
+above it enumerated the three and a reader was left to discover the fourth from
+a merge that would not go through.
 
 ### Proposed now, from checks that exist and run on pull requests
 
