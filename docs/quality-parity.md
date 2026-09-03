@@ -203,7 +203,8 @@ written as tests before they are found in the field.
 The headless, unelevated and offline conformance gate, #114, which is in the
 tree. The condition is established by #7; this proves it still holds on every
 pull request, which is the only way an intention like that survives. What it
-does not reach is #184.
+does not reach, and why no mechanism is owed for that part, is written under
+the `Tests` entry below.
 
 The import boundary, #111, which is in the tree. Architecture rules turned into
 tests, so a retrieval
@@ -295,12 +296,53 @@ runs with its route out removed, so a red result also means a test acquired a
 dependency on the network, and that is always the change's fault and never the
 world's. There is no second job and no second string a protection rule could
 name, because the condition binds the run rather than the job and a second job
-would have to run the whole suite again to be about anything. What the condition
-still does not reach is written into #114, which is closed as completed: a
-display and an accelerator are absences this job verifies about the runner
-rather than properties it established, and no fixture proves the job refuses a
-test that needs either of those two. #184 is where that residual is held, and
-it is open.
+would have to run the whole suite again to be about anything.
+
+The condition names four absences, and the job does not hold them all the same
+way, so they are separated here rather than covered by one verb. Two are
+removed by the job. The suite runs as a user the job creates, which is where
+the administrative rights go, and that user's route out is taken away by a rule
+aimed at its identifier. Two are checked about the runner rather than removed.
+The job reads that `DISPLAY` is unset and that no accelerator device node is
+present, and goes red if either is there. That is a verified fact about the
+machine the run happened on, and no reading of the workflow file makes it more
+than that. A runner that acquires a display server reddens this job; a change
+that acquires a dependency on one does not; and keeping the two verbs apart is
+what stops the second case being read as covered by the first.
+
+A fixture proves the refusal for two of the four, and they are not the same
+two. `internal/testreach` reads the test sources before anything runs and
+refuses an outbound dial, a name resolution, and an open of a device node
+outside the harmless set, which is where an accelerator would be reached, each
+with the file and the line. So the network and the accelerator are refused by
+name, with fixtures in front of the refusal. A display and elevation are not,
+and the two are out of scope for a mechanism by decision rather than by
+omission. The argument is written here so it can be argued with.
+
+Neither is readable from source. A test that needs a display reaches a display
+server over a socket whose path arrives in an environment variable, so there is
+no address in the file for a source check to find. A privileged system call is
+written exactly like an unprivileged one and differs only in being refused. What
+would read either is the effect rather than the source: run the suite twice
+under conditions that differ in that one thing, and refuse a test whose result
+differs between the runs. For elevation the second run is the suite run with
+administrative rights, which is this job doing the thing the condition exists
+to deny it. For a display it is installing and starting a display server on the
+runner in order to show that its absence matters, in a module whose `go.mod`
+names no dependency and whose tree holds nothing that opens a window. Either
+doubles the runtime of the one check proposed here as a merge condition, and
+either is paid for a class of test nothing in this tree has a reason to write.
+So neither is built.
+
+What is left is stated rather than softened. A test that needs a display or
+elevation still fails in this job, because the job has neither of the two, and
+the failure carries whatever the test's own assertion says about a socket that
+is not there or a call that was refused. Nothing names which of the two the
+test needed; the reader of the failure does that. No such test exists in the
+tree, so that shape of failure has not been measured here, and the sentence is
+a reading of the job rather than of a run. #114 recorded the residual when its
+own lines were judged, #184 held it while the choice was open, and this
+paragraph is where the choice landed.
 
 `Code scanning`. Without it a defect class the compiler does not see lands and
 nothing reads the tree for it. It also carries the one proof route in this

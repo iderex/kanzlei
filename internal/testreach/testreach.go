@@ -29,8 +29,10 @@
 // is a floor under the condition, not a proof of it. What re-proves it on
 // evidence from a run rather than from source landed under #114 and is the step
 // in .github/workflows/tests.yml that removes the route out and then proves it
-// gone. #184 is what neither reaches: a test needing a display or elevated
-// rights is refused by nothing here and by no fixture there.
+// gone. What neither reaches is a test needing a display or elevated rights:
+// refused by nothing here and by no fixture there, and out of scope for a
+// mechanism by the argument docs/quality-parity.md carries under its Tests
+// entry, which #184 decided.
 package testreach
 
 import (
